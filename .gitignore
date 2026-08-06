@@ -1,0 +1,7 @@
+server/node_modules/
+server/.env
+data/*.db
+data/*.db-journal
+data/*.db-shm
+data/*.db-wal
+migration-backup.json

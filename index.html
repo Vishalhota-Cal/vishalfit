@@ -1,0 +1,2900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VISHALXFIT — Train. Fuel. Peak.</title>
+<meta name="theme-color" content="#0A0B0D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VISHALXFIT">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>
+/* Anton + JetBrains Mono are SIL Open Font License 1.1 — bundling permitted, including in a paid product. */
+@font-face{
+  font-family:'Anton'; font-style:normal; font-weight:400; font-display:swap;
+  src:url('fonts/Anton-Regular.ttf') format('truetype');
+}
+@font-face{
+  font-family:'JetBrains Mono'; font-style:normal; font-weight:500; font-display:swap;
+  src:url('fonts/JetBrainsMono-Medium.ttf') format('truetype');
+}
+
+:root{
+  /* ---- ground: near-black, not pure #000 (halates against acid on OLED) ---- */
+  --ink:#0A0B0C;
+  --ink-void:#000000;        /* reserved for the lightbox + boot curtain only */
+  --sunken:#050506;          /* input wells, progress tracks, chart plot floor */
+  --surface:#101215;
+  --surface-raised:#16181A;
+  --surface-hover:#1C2024;
+
+  /* ---- the accent, rationed in three strengths ---- */
+  --acid:#CCFF00;            /* signature — hero numeral, active nav, primary fill, gauge set 7, chart's last point */
+  --acid-core:#B8E600;       /* workhorse — chart strokes, icons, accent text, "on target" */
+  --acid-deep:#8FA800;       /* structural — dim/quiet state, area-fill stop, hover borders */
+  --acid-wash:rgba(204,255,0,0.10);
+  --acid-glow:rgba(204,255,0,0.28);
+
+  --chalk:#F2F3F0;
+  --ink-2:#9DA2A8;           /* secondary text, micro-labels — 7.3:1 */
+  --ink-3:#6E747C;           /* tertiary + placeholders — was 2.22:1, now passes */
+
+  --warn:#FFB020;            /* over-target */
+  --danger:#D42A24;          /* destructive FILLS — white text on it passes AA */
+  --danger-ink:#FF7A70;      /* destructive TEXT on dark */
+  --danger-soft:rgba(212,42,36,0.14);
+
+  /* borders carry elevation here — fills can't, surfaces sit too close to --ink to separate on their own */
+  --line:rgba(242,243,240,0.08);
+  --line-strong:rgba(242,243,240,0.16);
+  --line-acid:rgba(204,255,0,0.32);
+  --sheen:inset 0 1px 0 rgba(255,255,255,0.05);
+
+  /* type scale: 7 sizes, not 15 */
+  --fs-micro:11px; --fs-xs:12px; --fs-sm:13px; --fs-base:15px;
+  --fs-input:16px; --fs-lg:17px;
+  --fs-d3:15px; --fs-d2:22px; --fs-d1:clamp(28px,6vw,40px); --fs-hero:clamp(56px,17vw,88px);
+
+  /* spacing, 4px base */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+
+  /* radius — concentric: sm inside md inside lg */
+  --r-sm:10px; --r-md:14px; --r-lg:20px;
+
+  /* elevation — three steps, then stop. e2/e3 lean on border brightness, not fill. */
+  --e1:0 1px 2px rgba(0,0,0,.5), 0 8px 24px -12px rgba(0,0,0,.7);
+  --e2:0 24px 60px -20px rgba(0,0,0,.85);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--ink);
+  color:var(--chalk);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI Variable Text','Segoe UI',Roboto,system-ui,sans-serif;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:76px;
+  font-size:var(--fs-base);
+}
+::selection{background:var(--acid-soft);color:var(--chalk);}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-thumb{background:var(--surface-raised);border-radius:8px;}
+a{color:inherit;}
+button{font-family:inherit;cursor:pointer;}
+input,select,textarea{font-family:inherit;}
+:focus-visible{outline:2px solid var(--acid);outline-offset:2px;}
+@media (prefers-reduced-motion:reduce){ *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;} }
+
+.mono{font-family:'JetBrains Mono',ui-monospace,'SF Mono','Cascadia Mono','Roboto Mono',Menlo,Consolas,monospace; font-variant-numeric:tabular-nums;}
+.display{font-family:'Anton','Arial Narrow',Impact,system-ui,sans-serif;font-weight:400;letter-spacing:0.02em;}
+
+/* vertical rhythm — replaces ad-hoc inline spacers. Also applied inside the
+   .fuel-narrow/.measure-narrow wrappers: those use display:contents so they
+   don't affect desktop width, but that ALSO makes their children invisible
+   to the `#app > * + *` selector (contents removes the box, not the DOM
+   parent-child relationship the selector matches on) — without this second
+   rule, cards inside them render with zero gap between them. */
+#app > * + *{ margin-top:var(--s4); }
+.fuel-narrow > * + *, .measure-narrow > * + *{ margin-top:var(--s4); }
+
+/* ---------- SHELL (mobile: invisible; desktop: sidebar rail) ---------- */
+.shell, .main{ display:contents; }
+.rail{ display:none; }
+
+/* ---------- HEADER ---------- */
+.topbar{
+  position:sticky;top:0;z-index:20;
+  background:linear-gradient(180deg, var(--ink) 60%, rgba(10,11,13,0.92));
+  backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--line);
+  padding:calc(14px + env(safe-area-inset-top)) 18px 12px;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:10px;
+}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-text .display{font-size:20px;line-height:1;color:var(--chalk);}
+.brand-text .tag{font-size:var(--fs-micro);color:var(--ink-2);letter-spacing:0.14em;text-transform:uppercase;margin-top:2px;}
+.topbar-actions{display:flex;align-items:center;gap:6px;}
+.topbar-clockbar{
+  display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  padding:8px 18px;border-bottom:1px solid var(--line);background:var(--ink);
+}
+.topbar-clockbar .greeting{font-family:'Anton','Arial Narrow',Impact,sans-serif;font-size:15px;color:var(--chalk);letter-spacing:0.01em;}
+.topbar-clockbar .clock{font-size:var(--fs-xs);color:var(--ink-2);white-space:nowrap;}
+.phase-badge{
+  padding:7px 13px;border-radius:20px;font-size:var(--fs-micro);font-weight:700;
+  letter-spacing:0.09em;text-transform:uppercase;border:1px solid var(--line);
+  background:var(--surface);cursor:pointer;user-select:none;
+  transition:transform .15s ease;
+}
+.phase-badge:active{transform:scale(0.96);}
+.phase-offseason{color:var(--acid);border-color:rgba(204,255,0,0.35);}
+.phase-prep{color:var(--chalk);border-color:var(--line-strong);}
+.phase-peak{color:#FF8A8A;border-color:rgba(255,77,77,0.4);background:var(--danger-soft);}
+
+/* ---------- NAV ---------- */
+.navbar{
+  position:fixed;bottom:0;left:0;right:0;z-index:30;
+  display:flex;background:var(--surface);border-top:1px solid var(--line);
+  padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+}
+.navbtn{
+  flex:1;background:none;border:none;color:var(--ink-2);
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:8px 2px;border-radius:10px;font-size:var(--fs-micro);font-weight:600;
+  letter-spacing:0.04em;text-transform:uppercase;transition:.15s;
+  min-height:44px;justify-content:center;
+}
+.navbtn svg{width:20px;height:20px;}
+.navbtn.active{color:var(--acid);background:var(--acid-soft);}
+.navbtn:hover{color:var(--chalk);}
+
+/* ---------- LAYOUT ---------- */
+.wrap{max-width:640px;margin:0 auto;padding:var(--s4) var(--s4) var(--s6);}
+.section-row{display:flex;align-items:center;justify-content:space-between;margin:4px 0 var(--s4);}
+.section-title{
+  font-family:'Anton','Arial Narrow',Impact,system-ui,sans-serif;font-size:var(--fs-d2);letter-spacing:0.01em;
+  color:var(--chalk); margin:0;
+}
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:var(--s4); box-shadow:var(--sheen);
+}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--s3);gap:8px;}
+.card-head h3{margin:0;font-size:var(--fs-micro);text-transform:uppercase;letter-spacing:0.09em;color:var(--ink-2);font-weight:700;}
+.card-head h3.accent{color:var(--acid);}
+.row{display:flex;gap:10px;}
+.row > *{flex:1;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+
+label{display:block;font-size:var(--fs-micro);color:var(--ink-2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:5px;font-weight:600;}
+input[type=text],input[type=number],input[type=date],input[type=password],select,textarea{
+  width:100%;background:var(--surface-raised);border:1px solid var(--line-strong);
+  color:var(--chalk);padding:10px 11px;border-radius:var(--r-sm);font-size:var(--fs-input);
+}
+input::placeholder{color:var(--ink-3);}
+textarea{resize:vertical;min-height:56px;}
+.field{margin-bottom:var(--s3);}
+
+.btn{
+  border:none;border-radius:var(--r-sm);padding:11px 16px;font-weight:700;font-size:var(--fs-sm);
+  letter-spacing:0.03em;display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  transition:transform .12s ease, opacity .12s ease;
+  min-height:44px;
+}
+.btn:active{transform:scale(0.97);}
+.btn-primary{background:var(--acid);color:#0A0B0C;font-weight:800;box-shadow:0 0 0 1px rgba(204,255,0,0.5),0 6px 20px -8px var(--acid-glow);}
+.btn-danger{background:var(--danger);color:#1a0505;}
+.btn-ghost{background:var(--surface-raised);color:var(--chalk);border:1px solid var(--line-strong);}
+.btn-ghost.accent{background:transparent;color:var(--acid-core);border:1px solid var(--line-acid);}
+.btn-ghost.accent:hover{background:var(--acid-wash);border-color:var(--acid-deep);}
+.btn-block{width:100%;}
+.btn-sm{padding:7px 11px;font-size:var(--fs-xs);border-radius:8px;min-height:36px;}
+.icon-btn{
+  background:none;border:none;color:var(--ink-2);padding:6px;border-radius:8px;
+  min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center;
+}
+.icon-btn:hover{color:var(--chalk);background:var(--surface-raised);}
+.icon-btn svg{width:18px;height:18px;}
+
+.muted{color:var(--ink-2);}
+.warn-text{color:var(--warn);}
+.small{font-size:var(--fs-xs);}
+.divider{height:1px;background:var(--line);margin:var(--s4) 0;}
+.tag-pill{
+  font-size:var(--fs-micro);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+  padding:3px 8px;border-radius:20px;background:var(--surface-raised);color:var(--ink-2);
+  display:inline-block;
+}
+.tag-fst{background:var(--acid-soft);color:var(--acid);}
+.datum{display:inline-flex;flex-direction:column;gap:2px;margin:0 var(--s3) var(--s2) 0;}
+.datum .v{font-family:ui-monospace,'SF Mono',monospace;font-size:var(--fs-sm);color:var(--chalk);}
+.datum .l{font-size:var(--fs-micro);color:var(--ink-2);text-transform:uppercase;letter-spacing:0.06em;}
+.empty-state{
+  text-align:center;padding:var(--s7) var(--s4);color:var(--ink-2);
+}
+.empty-state .display{font-size:19px;color:var(--chalk);margin-bottom:6px;}
+.empty-state .btn{margin-top:var(--s4);}
+
+/* ---------- DASHBOARD (hero) ---------- */
+.dash{display:grid;gap:var(--s4);grid-template-columns:1fr;}
+/* hero: the one big screenshot-worthy number. One accent glow lives here — nowhere else. */
+.hero{
+  position:relative;overflow:hidden;padding:var(--s5) var(--s4);
+  border:1px solid var(--line-acid);
+  background:radial-gradient(120% 140% at 0% 0%, rgba(204,255,0,0.07), transparent 60%), var(--surface);
+  box-shadow:var(--sheen), 0 24px 60px -28px rgba(204,255,0,0.18);
+}
+.hero-label{font-size:var(--fs-micro);letter-spacing:0.1em;color:var(--ink-2);text-transform:uppercase;}
+.hero-value{
+  font-family:'Anton','Arial Narrow',Impact,sans-serif;font-size:var(--fs-hero);line-height:0.86;color:var(--acid);
+  text-shadow:0 0 28px rgba(204,255,0,0.30); margin-top:6px; position:relative; z-index:1;
+}
+.hero-unit{font-size:14px;color:var(--ink-2);margin-left:8px;text-transform:lowercase;}
+.hero-sub{font-size:var(--fs-sm);color:var(--acid-core);margin-top:6px;position:relative;z-index:1;}
+.hero-empty{font-size:var(--fs-sm);color:var(--ink-2);margin-top:14px;max-width:36ch;position:relative;z-index:1;}
+.hero-spark{position:absolute;right:0;bottom:0;width:56%;height:52%;pointer-events:none;}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.stat-card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:var(--s3);
+  box-shadow:var(--sheen);
+}
+.stat-card .label{font-size:var(--fs-micro);text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-2);font-weight:700;margin-bottom:6px;}
+.stat-card .value{font-family:'Anton','Arial Narrow',Impact,sans-serif;font-size:var(--fs-d1);color:var(--chalk);line-height:1;}
+.stat-card .value.accent{color:var(--acid);}
+.stat-card .sub{font-size:var(--fs-xs);color:var(--ink-2);margin-top:4px;}
+.stat-card .sub.up{color:var(--acid-core);}
+.stat-card .spark{margin-top:6px;height:22px;}
+.quickgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.qbtn{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:16px 12px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+  color:var(--chalk);text-align:left; box-shadow:var(--sheen); min-height:44px;
+}
+.qbtn svg{width:22px;height:22px;color:var(--acid);}
+.qbtn .qlabel{font-weight:700;font-size:var(--fs-sm);}
+
+/* macro bars */
+.macrobar{margin-bottom:10px;}
+.macrobar-top{display:flex;justify-content:space-between;font-size:var(--fs-xs);margin-bottom:5px;}
+.macrobar-track{height:8px;border-radius:8px;background:var(--surface-raised);overflow:hidden;position:relative;}
+.macrobar-fill{height:100%;border-radius:8px;position:absolute;left:0;top:0;}
+.macrobar-over{height:100%;border-radius:8px;position:absolute;top:0;background:var(--warn);opacity:0.85;}
+
+/* ---------- 7 GAUGE (signature): vertical staves, ordinal ramp ---------- */
+.gauge7-panel{background:var(--surface-raised);border:1px solid var(--line-strong);border-radius:var(--r-md);padding:var(--s3);}
+.gauge7{display:flex;gap:5px;align-items:flex-end;height:56px;margin:6px 0 8px;}
+.gauge7 .seg{
+  flex:1;height:100%;border-radius:5px;background:var(--surface);
+  border:1px solid var(--line-strong);position:relative;overflow:visible;
+  display:flex;align-items:flex-end;
+}
+.gauge7 .seg .fill{
+  width:100%;border-radius:4px;height:0%;transition:height .25s ease;
+}
+.gauge7 .seg.filled .fill{height:100%;}
+.gauge7 .seg.pulse .fill{animation:pulse7 1.1s ease-in-out infinite;}
+@keyframes pulse7{
+  0%,100%{filter:drop-shadow(0 0 0 rgba(204,255,0,0));}
+  50%{filter:drop-shadow(0 0 6px rgba(204,255,0,0.75));}
+}
+.rest-timer{
+  display:flex;align-items:center;gap:12px;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;margin-top:8px;
+}
+.rest-timer .ring{width:36px;height:36px;flex-shrink:0;}
+.rest-timer .ring circle{transition:stroke-dashoffset .95s linear;}
+.rest-timer .txt{font-size:var(--fs-xs);color:var(--ink-2);}
+.rest-timer .txt b{color:var(--chalk);}
+
+/* boot curtain */
+#boot{
+  position:fixed;inset:0;background:var(--ink);z-index:500;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+}
+#boot .gauge7{width:140px;height:44px;}
+#boot .display{font-size:22px;letter-spacing:0.06em;color:var(--chalk);}
+#boot .tag{font-size:var(--fs-micro);color:var(--ink-2);letter-spacing:0.16em;text-transform:uppercase;}
+
+/* ---------- exercise / set rows ---------- */
+.exercise-block{background:var(--surface-raised);border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:var(--s3);}
+.exercise-block-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;}
+.exercise-name-input{flex:1;}
+.set-row{display:grid;grid-template-columns:28px 1fr 1fr auto;gap:8px;align-items:center;margin-bottom:6px;}
+.set-row .idx{font-family:ui-monospace,monospace;font-size:var(--fs-xs);color:var(--ink-2);text-align:center;}
+.set-row input{padding:8px 9px;font-size:var(--fs-input);}
+.chk-wrap{display:flex;align-items:center;gap:7px;font-size:var(--fs-xs);color:var(--ink-2);user-select:none;}
+.chk-wrap input{width:auto;accent-color:var(--acid);}
+
+/* ---------- history list ---------- */
+.hist-item{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:13px 14px;box-shadow:var(--sheen);}
+.hist-top{display:flex;justify-content:space-between;align-items:flex-start;background:none;border:none;width:100%;color:inherit;text-align:left;padding:0;min-height:0;}
+.hist-date{font-family:ui-monospace,monospace;font-size:var(--fs-xs);color:var(--ink-2);}
+.hist-title{font-weight:700;font-size:var(--fs-lg);margin-top:2px;}
+.hist-body{margin-top:10px;font-size:var(--fs-xs);color:var(--ink-2);}
+.hist-body div{margin-bottom:3px;}
+.hist-body b{color:var(--chalk);}
+.hist-actions{display:flex;gap:6px;margin-top:8px;}
+
+/* ---------- modal ---------- */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(4,4,5,0.72);z-index:100;
+  display:flex;align-items:flex-end;justify-content:center;
+}
+.modal-sheet{
+  background:var(--ink);border-top-left-radius:var(--r-lg);border-top-right-radius:var(--r-lg);
+  width:100%;max-width:640px;max-height:88vh;overflow-y:auto;
+  padding:var(--s4) var(--s4) calc(20px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--line-strong);
+  box-shadow:var(--e2);
+  animation:slideUp .22s ease;
+}
+@keyframes slideUp{from{transform:translateY(24px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+@keyframes zoomIn{from{transform:scale(0.97);opacity:0;}to{transform:scale(1);opacity:1;}}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--s4);}
+.modal-head h2{font-family:'Anton','Arial Narrow',sans-serif;font-size:21px;margin:0;font-weight:400;}
+.confirm-sheet .modal-sheet{max-width:400px;text-align:center;}
+.confirm-sheet .row{margin-top:var(--s4);}
+
+/* ---------- chart ---------- */
+.chartwrap{width:100%;position:relative;}
+.chartwrap svg{width:100%;height:auto;display:block;touch-action:pan-y;}
+.chart-tooltip{
+  position:absolute;pointer-events:none;background:var(--surface-raised);border:1px solid var(--line-strong);
+  border-radius:8px;padding:6px 9px;font-size:var(--fs-xs);box-shadow:var(--e1);white-space:nowrap;
+  transform:translate(-50%,-115%);display:none;z-index:5;
+}
+.spark-svg{width:100%;height:100%;display:block;}
+
+/* photos */
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.photo-thumb{position:relative;border-radius:var(--r-sm);overflow:hidden;aspect-ratio:3/4;background:var(--surface-raised);border:1px solid var(--line);padding:0;}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.photo-thumb .cap{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg, rgba(0,0,0,0.75), transparent);padding:5px 6px 4px;font-size:9.5px;color:var(--chalk);}
+.pose-pill{position:absolute;top:5px;left:5px;font-size:8.5px;font-weight:700;text-transform:uppercase;background:rgba(0,0,0,0.55);padding:2px 6px;border-radius:20px;}
+.lightbox{position:fixed;inset:0;background:rgba(5,5,6,0.94);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
+.lightbox img{max-width:100%;max-height:76vh;border-radius:var(--r-sm);object-fit:contain;}
+
+.upload-drop{
+  border:1.5px dashed var(--line-strong);border-radius:var(--r-sm);padding:24px 12px;text-align:center;
+  color:var(--ink-2);font-size:var(--fs-sm);cursor:pointer;background:none;width:100%;
+}
+.upload-drop:hover, .upload-drop.dragover{border-color:var(--acid);color:var(--chalk);background:var(--acid-soft);}
+
+.compare-select{display:flex;gap:8px;margin-bottom:var(--s3);}
+.compare-view{position:relative;border-radius:var(--r-sm);overflow:hidden;aspect-ratio:3/4;background:var(--surface-raised);touch-action:none;}
+.compare-view img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top;}
+.compare-view img.top{opacity:1;transition:opacity .05s linear;}
+.compare-head{display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--ink-2);margin-bottom:6px;}
+.compare-hint{text-align:center;font-size:var(--fs-micro);color:var(--ink-2);margin-top:6px;text-transform:uppercase;letter-spacing:0.06em;}
+
+.toast{
+  position:fixed;bottom:86px;left:50%;transform:translateX(-50%);
+  background:var(--surface-raised);border:1px solid var(--line-strong);color:var(--chalk);
+  padding:10px 18px;border-radius:20px;font-size:var(--fs-sm);z-index:150;
+  box-shadow:var(--e1); display:flex;align-items:center;gap:8px;max-width:88vw;
+}
+.toast.success{border-color:rgba(111,191,134,0.4);}
+.toast.error{border-color:rgba(255,77,77,0.5);background:var(--danger-soft);}
+.toast .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--ink-2);}
+.toast.success .dot{background:var(--acid-core);}
+.toast.error .dot{background:var(--danger);}
+
+.storage-banner{
+  position:fixed;top:0;left:0;right:0;z-index:400;background:var(--danger);color:#1a0505;
+  padding:10px 16px;text-align:center;font-size:var(--fs-sm);font-weight:700;
+}
+
+/* settings */
+.settings-section{margin-bottom:var(--s5);}
+.settings-section h4{font-size:var(--fs-micro);text-transform:uppercase;letter-spacing:0.09em;color:var(--ink-2);margin:0 0 var(--s2);}
+.kv-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:var(--fs-sm);}
+.kv-row:last-child{border-bottom:none;}
+
+@media (min-width:641px){
+  body{padding-bottom:0;}
+  .wrap{max-width:720px;}
+  .navbar{position:static;background:var(--surface);border-top:none;border-bottom:1px solid var(--line);max-width:720px;margin:0 auto;}
+  .toast{bottom:24px;}
+  .stat-grid{grid-template-columns:repeat(3,1fr);}
+}
+
+@media (min-width:1024px){
+  .shell{
+    display:grid; grid-template-columns:248px minmax(0,1fr); min-height:100dvh;
+  }
+  .main{ display:flex; flex-direction:column; min-width:0; }
+  .navbar{
+    display:none;
+  }
+  .rail{
+    display:flex; position:sticky; top:0; height:100dvh; z-index:30;
+    flex-direction:column; align-items:stretch; gap:2px;
+    background:var(--surface); border-right:1px solid var(--line);
+    padding:20px 12px;
+  }
+  .rail .brand{margin:0 8px 28px;}
+  .topbar .brand{display:none;}
+  .rail .railbtn{
+    display:flex;flex-direction:row;align-items:center;gap:12px;
+    background:none;border:none;color:var(--ink-2);
+    padding:11px 14px;border-radius:10px;font-size:var(--fs-sm);font-weight:600;
+    position:relative;text-align:left;
+  }
+  .rail .railbtn svg{width:19px;height:19px;flex-shrink:0;}
+  .rail .railbtn.active{color:var(--acid);background:var(--acid-soft);}
+  .rail .railbtn.active::before{
+    content:'';position:absolute;left:-12px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--acid);
+  }
+  .wrap{max-width:1080px;padding:28px 32px 48px;}
+  .modal-overlay{align-items:center;}
+  .modal-sheet{max-width:560px;border-radius:var(--r-lg);max-height:84vh;animation:zoomIn .18s ease;}
+
+  .dash{grid-template-columns:repeat(12,1fr);}
+  .dash > .hero{grid-column:1 / -1;min-height:200px;}
+  .dash > .dash-fuel{grid-column:span 12;}
+  .dash > .dash-checklist{grid-column:span 3;}
+  .dash > .dash-streak{grid-column:span 3;}
+  .dash > .dash-quick{grid-column:span 6;display:grid;grid-template-columns:1fr;}
+  .dash > .dash-quick .quickgrid{grid-template-columns:repeat(4,1fr);}
+  .dash > .dash-dietplan{grid-column:span 6;}
+  .dash > .dash-water{grid-column:span 6;}
+
+  #train-hist{columns:2;column-gap:16px;}
+  #train-hist .hist-item{break-inside:avoid;margin-bottom:10px;}
+  .photo-grid{grid-template-columns:repeat(5,1fr);}
+  .fuel-narrow, .measure-narrow{max-width:760px;}
+  .grid2.desktop-4{grid-template-columns:repeat(4,1fr);}
+}
+</style>
+</head>
+<body>
+
+<div id="boot">
+  <div class="gauge7" id="bootGauge"></div>
+  <div class="display">VISHALXFIT</div>
+  <div class="tag">Train · Fuel · Peak</div>
+</div>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="brand">
+      <div class="brand-text">
+        <div class="display">VISHALXFIT</div>
+        <div class="tag">Train · Fuel · Peak</div>
+      </div>
+    </div>
+    <button class="railbtn" data-tab="dashboard" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+      Dash
+    </button>
+    <button class="railbtn" data-tab="train" onclick="switchTab('train')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 6.5l11 11M4 4l3 3M20 20l-3-3M2.5 8.5l3-3a1.5 1.5 0 012 0l9 9a1.5 1.5 0 010 2l-3 3a1.5 1.5 0 01-2 0l-9-9a1.5 1.5 0 010-2z"/></svg>
+      Train
+    </button>
+    <button class="railbtn" data-tab="fuel" onclick="switchTab('fuel')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a3 3 0 010 6h-1M18 8v10a2 2 0 01-2 2H6a2 2 0 01-2-2V8h14zM6 3v3M10 3v3M14 3v3"/></svg>
+      Fuel
+    </button>
+    <button class="railbtn" data-tab="measure" onclick="switchTab('measure')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17V7a1 1 0 011-1h16a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1z"/><path d="M7 6v4M11 6v2M15 6v4M19 6v2"/></svg>
+      Measure
+    </button>
+    <button class="railbtn" data-tab="photos" onclick="switchTab('photos')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.2"/><path d="M8 5l1.3-2h5.4L16 5"/></svg>
+      Photos
+    </button>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-text">
+          <div class="display">VISHALXFIT</div>
+          <div class="tag">Train · Fuel · Peak</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div id="phaseBadge" class="phase-badge phase-offseason" onclick="cyclePhase()">Off-Season</div>
+        <button class="icon-btn" onclick="openProfileForm()" title="My Profile" aria-label="My Profile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c1.5-3.8 5-5.5 7.5-5.5s6 1.7 7.5 5.5"/></svg>
+        </button>
+        <button class="icon-btn" onclick="openSettings()" title="Settings" aria-label="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a7.9 7.9 0 000-3l1.9-1.5-2-3.4-2.2.7a8 8 0 00-2.6-1.5L14 2h-4l-.5 2.3a8 8 0 00-2.6 1.5l-2.2-.7-2 3.4L4.6 10.5a7.9 7.9 0 000 3L2.7 15l2 3.4 2.2-.7a8 8 0 002.6 1.5L10 22h4l.5-2.3a8 8 0 002.6-1.5l2.2.7 2-3.4z"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="topbar-clockbar" id="topbarClockbar"></div>
+    <main id="app" class="wrap"></main>
+  </div>
+</div>
+
+<div class="navbar">
+  <button class="navbtn" data-tab="dashboard" onclick="switchTab('dashboard')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+    Dash
+  </button>
+  <button class="navbtn" data-tab="train" onclick="switchTab('train')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 6.5l11 11M4 4l3 3M20 20l-3-3M2.5 8.5l3-3a1.5 1.5 0 012 0l9 9a1.5 1.5 0 010 2l-3 3a1.5 1.5 0 01-2 0l-9-9a1.5 1.5 0 010-2z"/></svg>
+    Train
+  </button>
+  <button class="navbtn" data-tab="fuel" onclick="switchTab('fuel')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a3 3 0 010 6h-1M18 8v10a2 2 0 01-2 2H6a2 2 0 01-2-2V8h14zM6 3v3M10 3v3M14 3v3"/></svg>
+    Fuel
+  </button>
+  <button class="navbtn" data-tab="measure" onclick="switchTab('measure')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17V7a1 1 0 011-1h16a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1z"/><path d="M7 6v4M11 6v2M15 6v4M19 6v2"/></svg>
+    Measure
+  </button>
+  <button class="navbtn" data-tab="photos" onclick="switchTab('photos')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.2"/><path d="M8 5l1.3-2h5.4L16 5"/></svg>
+    Photos
+  </button>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+<div id="storageBannerRoot"></div>
+
+<script>
+/* ============================================================
+   BRAND MARK — the seven-staves motif, reused everywhere:
+   app icon, topbar mark, boot curtain, FST-7 gauge.
+============================================================ */
+function sevenStavesSvg(opts){
+  const o = Object.assign({bars:7, gap:1, filled:7, activeIdx:-1, rounded:true}, opts||{});
+  const n = o.bars;
+  const w = 100, h = 100;
+  const gap = o.gap;
+  const barW = (w - gap*(n-1)) / n;
+  let out = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">`;
+  for(let i=0;i<n;i++){
+    const t = i/(n-1);
+    const barH = h * (0.28 + 0.72 * Math.pow((i+1)/n, 1.3));
+    const x = i*(barW+gap);
+    const y = h - barH;
+    const filled = i < o.filled;
+    const active = i === o.activeIdx;
+    const color = filled ? lerpAcid(t) : 'var(--surface-raised)';
+    out += `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${barW.toFixed(2)}" height="${barH.toFixed(2)}" rx="2" fill="${color}" ${active?'class="stave-active"':''}/>`;
+  }
+  out += `</svg>`;
+  return out;
+}
+// Validated 7-step acid ordinal ramp for the FST-7 gauge: lightness-monotone,
+// every adjacent step >=0.06 delta-L apart (individually distinguishable),
+// dark end still clears its track. Set 7 lands on full-strength --acid —
+// the brightest pixel in the app appears exactly when the burnout set finishes.
+const ACID_RAMP_7 = ['#4A5A16','#5E721B','#738A20','#89A425','#A0BE2A','#B6D92F','#CCFF00'];
+function lerpAcid(t){
+  const idx = Math.round(t * (ACID_RAMP_7.length-1));
+  return ACID_RAMP_7[Math.max(0, Math.min(ACID_RAMP_7.length-1, idx))];
+}
+
+/* ============================================================
+   DATA + CONSTANTS — fetched once at boot from GET /api/meta
+   (the server's referenceData.js owns these now; see Architecture
+   decision in the plan for why this moved out of the client).
+============================================================ */
+let EXERCISE_LIBRARY_DEFAULT = [];
+let FOOD_LIBRARY_DEFAULT = [];
+let PHASE_PRESETS = {};
+let MEAL_SLOTS = [];
+
+const OPENAI_MODEL_DEFAULT = "gpt-4o-mini";
+const SW_VERSION = "vx-2026-08-05-6";
+
+/* ============================================================
+   STATE
+============================================================ */
+function freshTargets(key){
+  const {label, ...t} = PHASE_PRESETS[key];
+  return t;
+}
+function defaultSettings(){
+  return { phase:"offseason", unit:"kg", targets: freshTargets("offseason"), targetsEdited:false, aiModel: OPENAI_MODEL_DEFAULT };
+}
+let state = {
+  tab: "dashboard",
+  settings: null,
+  workouts: [],
+  exerciseLibrary: [],
+  dietLog: [],
+  foodLibrary: [],
+  measurements: [],
+  photos: [],       // metadata only: {id,date,pose,note,w,h} — images stream from /api/photos/:id/:variant
+  programs: [],
+  activeSession: null,
+  steps: [],
+  cardioLog: [],
+  profile: null,     // {heightCm, age, sex, activityLevel, waterTargetL, waterIncrementL}
+  dietPlan: null,     // {breakfast:'text', lunch:'text', ...} one per MEAL_SLOTS key
+  waterLog: [],
+  loaded: false,
+  fuelDate: null     // non-persisted, reset each launch — set in init()
+};
+
+let draftWorkout = null;
+let draftSteps = null;
+let draftCardio = null;
+let draftProfile = null;
+let draftDietPlan = null;
+let draftMeasurement = null;
+let draftPhoto = null;
+let draftProgram = null;
+let compareIds = [null,null];
+let compareFade = 50;
+let expandedWorkouts = new Set();
+let restIntervals = new Map();   // exUid -> intervalId
+let sessionTicker = null;        // setInterval id for the live execution-mode duration display
+let chartData = {};              // id -> {points, ...} cached for hover
+
+const todayStr = () => new Date().toISOString().slice(0,10);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+
+/* ============================================================
+   API CLIENT — the only place that talks to the backend. Kept
+   behind loadKey()/saveKey() with their ORIGINAL signatures, so
+   every existing render/save call site elsewhere in this file
+   needed zero changes when storage moved server-side.
+============================================================ */
+const API = '/api';
+
+async function apiGet(path){
+  const r = await fetch(API+path);
+  if(!r.ok) throw Object.assign(new Error('GET '+path+' failed: '+r.status), {status:r.status});
+  return r.json();
+}
+async function apiSend(path, method, body){
+  const opts = { method };
+  if(body !== undefined){ opts.headers = {'Content-Type':'application/json'}; opts.body = JSON.stringify(body); }
+  const r = await fetch(API+path, opts);
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok) throw Object.assign(new Error(data.error || ('HTTP '+r.status)), {status:r.status, code:data.code});
+  return data;
+}
+
+function showStorageBanner(msg){
+  document.getElementById('storageBannerRoot').innerHTML = `<div class="storage-banner">⚠ ${escapeHtml(msg)}</div>`;
+}
+
+async function loadMeta(){
+  try{
+    const meta = await apiGet('/meta');
+    EXERCISE_LIBRARY_DEFAULT = meta.exerciseLibraryDefault;
+    FOOD_LIBRARY_DEFAULT = meta.foodLibraryDefault;
+    PHASE_PRESETS = meta.phasePresets;
+    MEAL_SLOTS = meta.mealSlots;
+    return true;
+  }catch(e){
+    showStorageBanner("Can't reach the VISHALXFIT server. Run start-vishal7.command, then reload this page.");
+    return false;
+  }
+}
+
+async function loadKey(key, fallback){
+  try{
+    const {value} = await apiGet('/kv/'+key);
+    return value == null ? fallback : value;
+  }catch(e){ return fallback; }
+}
+async function saveKey(key, value){
+  try{
+    const r = await apiSend('/kv/'+key, 'PUT', {value});
+    // Record our own write's revision so the poll loop below doesn't turn
+    // right around and re-fetch what we just saved locally.
+    if(typeof r.rev === 'number') lastSeenRev = r.rev;
+    return true;
+  }catch(e){
+    console.error("save failed", key, e);
+    showToast("Couldn't save — is the server still running?", "error");
+    return false;
+  }
+}
+
+async function loadAll(){
+  const [settings, workouts, exerciseLibrary, dietLog, foodLibrary, measurements, photosRes, programs, sessionRes, steps, cardioLog, profile, dietPlan, waterLog] = await Promise.all([
+    loadKey('settings', null),
+    loadKey('workouts', []),
+    loadKey('exerciseLibrary', []),
+    loadKey('dietLog', []),
+    loadKey('foodLibrary', []),
+    loadKey('measurements', []),
+    apiGet('/photos').catch(()=>({photos:[]})),
+    loadKey('programs', []),
+    apiGet('/session').catch(()=>({session:null})),
+    loadKey('steps', []),
+    loadKey('cardioLog', []),
+    loadKey('profile', null),
+    loadKey('dietPlan', null),
+    loadKey('waterLog', [])
+  ]);
+  state.settings = settings || defaultSettings();
+  state.workouts = workouts || [];
+  state.exerciseLibrary = exerciseLibrary || [];
+  state.dietLog = dietLog || [];
+  state.foodLibrary = foodLibrary || [];
+  state.measurements = measurements || [];
+  state.photos = photosRes.photos || [];
+  state.programs = programs || [];
+  state.activeSession = sessionRes.session || null;
+  state.steps = steps || [];
+  state.cardioLog = cardioLog || [];
+  state.profile = profile || null;
+  state.dietPlan = dietPlan || null;
+  state.waterLog = waterLog || [];
+  state.fuelDate = todayStr();
+  state.loaded = true;
+}
+
+/* ============================================================
+   CROSS-DEVICE SYNC — cheap polling for a second device (e.g. an
+   iPhone) sharing this same server/database. The server keeps an
+   in-memory revision counter that bumps on every write; we poll that
+   tiny endpoint on an interval and only pay for a full state refresh
+   when it actually moved. Never refreshes while a modal is open, a
+   draft edit is in flight, or an input is focused — that would
+   silently discard whatever you're mid-typing.
+============================================================ */
+let lastSeenRev = null;
+let pollTimer = null;
+
+function pollBlocked(){
+  const modalRoot = document.getElementById('modalRoot');
+  if(modalRoot && modalRoot.innerHTML.trim() !== "") return true;
+  if(draftWorkout || draftSteps || draftCardio || draftProfile || draftDietPlan || draftMeasurement || draftPhoto || draftProgram) return true;
+  const el = document.activeElement;
+  if(el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return true;
+  return false;
+}
+
+async function refreshFromServer(){
+  const scrollY = window.scrollY;
+  const fuelDate = state.fuelDate;
+  await loadAll();
+  state.fuelDate = fuelDate;
+  renderApp();
+  window.scrollTo({top: scrollY, behavior:'instant'});
+}
+
+async function pollForRemoteChanges(){
+  if(document.visibilityState !== 'visible') return;
+  if(pollBlocked()) return;
+  let rev;
+  try{
+    ({rev} = await apiGet('/meta/rev'));
+  }catch(e){ return; } // offline/unreachable — normal on a phone, not an error to surface here
+
+  if(lastSeenRev === null){ lastSeenRev = rev; return; }
+  if(rev === lastSeenRev) return;
+  lastSeenRev = rev;
+  await refreshFromServer();
+}
+
+const POLL_INTERVAL_MS = 15000;
+function startPolling(){
+  stopPolling();
+  pollTimer = setInterval(pollForRemoteChanges, POLL_INTERVAL_MS);
+}
+function stopPolling(){
+  if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
+}
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible'){ pollForRemoteChanges(); startPolling(); }
+  else stopPolling();
+});
+window.addEventListener('focus', pollForRemoteChanges);
+
+/* ============================================================
+   UTIL
+============================================================ */
+let toastTimer = null;
+function showToast(msg, kind){
+  clearTimeout(toastTimer);
+  const root = document.getElementById('toastRoot');
+  const cls = kind ? ' '+kind : '';
+  root.innerHTML = `<div class="toast${cls}" role="status" aria-live="polite"><span class="dot"></span>${escapeHtml(msg)}</div>`;
+  toastTimer = setTimeout(()=>{ root.innerHTML=""; }, 2600);
+}
+function escapeHtml(s){
+  return String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtDate(d){
+  const dt = new Date(d + "T00:00:00");
+  return dt.toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
+}
+function fmtShort(d){
+  const dt = new Date(d + "T00:00:00");
+  return dt.toLocaleDateString(undefined, {month:'short', day:'numeric'});
+}
+function dietTotals(day){
+  const t = {calories:0, protein:0, carbs:0, fat:0, fiber:0};
+  if(!day || !day.meals) return t;
+  MEAL_SLOTS.forEach(m => (day.meals[m.key]||[]).forEach(f => {
+    t.calories += Number(f.calories)||0;
+    t.protein += Number(f.protein)||0;
+    t.carbs += Number(f.carbs)||0;
+    t.fat += Number(f.fat)||0;
+    t.fiber += Number(f.fiber)||0;
+  }));
+  return t;
+}
+function allExerciseNames(){
+  return [...new Set([...EXERCISE_LIBRARY_DEFAULT, ...state.exerciseLibrary])].sort();
+}
+function trainingStreak(){
+  const dates = new Set(state.workouts.map(w=>w.date));
+  let streak = 0;
+  let d = new Date();
+  // allow "today not logged yet" to not break a streak that continues yesterday
+  if(!dates.has(todayStr())) d.setDate(d.getDate()-1);
+  while(true){
+    const s = d.toISOString().slice(0,10);
+    if(dates.has(s)){ streak++; d.setDate(d.getDate()-1); } else break;
+  }
+  return streak;
+}
+function getActiveProgram(){
+  return state.programs.find(p=>p.active) || null;
+}
+// Weekday derived the same way the server's workoutProgramService does (UTC,
+// from the date STRING) — see the comment there on why parsing todayStr()
+// as local time and reading it back with UTC getters would silently shift
+// by a day for most users.
+function getTodaysProgramDay(){
+  const program = getActiveProgram();
+  if(!program) return null;
+  const weekday = new Date(todayStr()+'T00:00:00Z').getUTCDay();
+  return program.days.find(d=>d.weekday===weekday) || null;
+}
+
+/* ============================================================
+   CONFIRM SHEET — replaces native confirm() everywhere
+============================================================ */
+function confirmSheet(message, onYes, opts){
+  const o = Object.assign({yes:'Delete', danger:true}, opts||{});
+  document.getElementById('modalRoot').innerHTML = `
+    <div class="modal-overlay confirm-sheet" onclick="if(event.target===this) closeModal()">
+      <div class="modal-sheet" role="dialog" aria-modal="true">
+        <div class="display" style="font-size:18px;margin-bottom:8px;">Are you sure?</div>
+        <div class="muted small">${escapeHtml(message)}</div>
+        <div class="row">
+          <button class="btn btn-ghost btn-block" onclick="closeModal()">Cancel</button>
+          <button class="btn ${o.danger?'btn-danger':'btn-primary'} btn-block" id="confirmYesBtn">${escapeHtml(o.yes)}</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('confirmYesBtn').onclick = ()=>{ closeModal(); onYes(); };
+}
+
+/* ============================================================
+   PHASE BADGE
+============================================================ */
+function cyclePhase(){
+  const order = ["offseason","prep","peak"];
+  const i = order.indexOf(state.settings.phase);
+  const next = order[(i+1) % order.length];
+  if(state.settings.targetsEdited){
+    confirmSheet(`Switch to ${PHASE_PRESETS[next].label} and reset your macro targets to that preset? Your edited targets will be replaced.`, ()=>applyPreset(next), {yes:'Switch', danger:false});
+  } else {
+    applyPreset(next);
+  }
+}
+function renderPhaseBadge(){
+  const b = document.getElementById('phaseBadge');
+  const p = state.settings.phase;
+  b.className = `phase-badge phase-${p}`;
+  b.textContent = PHASE_PRESETS[p].label;
+}
+
+/* ============================================================
+   NAV
+============================================================ */
+function switchTab(tab){
+  state.tab = tab;
+  document.querySelectorAll('.navbtn,.railbtn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  renderApp();
+  window.scrollTo({top:0, behavior:'instant'});
+}
+
+/* ============================================================
+   MASTER RENDER
+============================================================ */
+function renderApp(){
+  const app = document.getElementById('app');
+  renderPhaseBadge();
+  document.querySelectorAll('.navbtn,.railbtn').forEach(b => b.classList.toggle('active', b.dataset.tab === state.tab));
+  if(!state.loaded){ app.innerHTML = `<div class="empty-state">Loading your data…</div>`; return; }
+  switch(state.tab){
+    case 'dashboard': app.innerHTML = renderDashboard(); loadChecklistCard(); hydratePhotoImages(); if(state.activeSession) startSessionTicker(); break;
+    case 'train': app.innerHTML = renderTrain(); loadChecklistCard(); if(state.activeSession) startSessionTicker(); break;
+    case 'fuel': app.innerHTML = renderFuel(); break;
+    case 'measure': app.innerHTML = renderMeasure(); drawWeightChart(); break;
+    case 'photos': app.innerHTML = renderPhotos(); hydratePhotoImages(); break;
+  }
+}
+
+/* ============================================================
+   DASHBOARD (hero)
+============================================================ */
+function sparklinePath(vals, w, h){
+  if(vals.length < 2) return '';
+  const min = Math.min(...vals), max = Math.max(...vals), range=(max-min)||1;
+  const step = w/(vals.length-1);
+  return vals.map((v,i)=>{
+    const x = i*step, y = h - ((v-min)/range)*h;
+    return (i===0?'M':'L')+x.toFixed(1)+','+y.toFixed(1);
+  }).join(' ');
+}
+
+/* ============================================================
+   STEPS — manual entry (no pedometer/HealthKit access is possible
+   from a local vanilla-JS web app), replacing the volume chart's
+   slot on the dashboard.
+============================================================ */
+function todaysStepsEntry(){
+  return state.steps.find(s=>s.date===todayStr());
+}
+function renderStepsCard(){
+  const today = todaysStepsEntry();
+  const recent = [...state.steps].sort((a,b)=> a.date<b.date?-1:1).slice(-7);
+  const sparkPath = sparklinePath(recent.map(s=>Number(s.count)), 260, 50);
+  return `
+    <button class="card dash-chart" style="text-align:left;width:100%;cursor:pointer;" onclick="openStepsForm()">
+      <div class="card-head"><h3>Steps Today</h3><span class="small muted">tap to log</span></div>
+      <div class="hero-value" style="font-size:var(--fs-d1);text-shadow:none;">${today ? Number(today.count).toLocaleString() : '—'}</div>
+      ${sparkPath ? `<svg viewBox="0 0 260 50" preserveAspectRatio="none" style="width:100%;height:40px;margin-top:6px;display:block;"><path d="${sparkPath}" fill="none" stroke="var(--acid-core)" stroke-width="2" opacity="0.6"/></svg>`
+        : `<div class="muted small" style="margin-top:8px;">Log a few days to see your trend.</div>`}
+    </button>
+  `;
+}
+function openStepsForm(){
+  const existing = todaysStepsEntry();
+  draftSteps = { date: todayStr(), count: existing ? existing.count : '' };
+  renderStepsModal();
+}
+function renderStepsModal(){
+  const d = draftSteps;
+  const html = `
+    <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal-sheet" role="dialog" aria-modal="true">
+        <div class="modal-head"><h2>Log Steps</h2><button class="icon-btn" onclick="closeModal()" aria-label="Close">${xIcon()}</button></div>
+        <div class="field"><label>Date</label><input type="date" value="${d.date}" onchange="draftSteps.date=this.value"></div>
+        <div class="field"><label>Steps</label><input type="number" step="1" id="stepsCount" value="${d.count}" placeholder="e.g. 8500" onchange="draftSteps.count=this.value"></div>
+        <button class="btn btn-primary btn-block" onclick="saveSteps()">Save</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modalRoot').innerHTML = html;
+  document.getElementById('stepsCount').focus();
+}
+async function saveSteps(){
+  const count = Number(draftSteps.count);
+  if(!count){ showToast("Enter a step count"); return; }
+  const idx = state.steps.findIndex(s=>s.date===draftSteps.date);
+  const entry = { id: idx>=0 ? state.steps[idx].id : uid(), date: draftSteps.date, count };
+  if(idx>=0) state.steps[idx] = entry; else state.steps.push(entry);
+  const ok = await saveKey('steps', state.steps);
+  closeModal();
+  renderApp();
+  if(ok) showToast("Steps logged","success");
+}
+
+/* ============================================================
+   PROFILE — height/age/sex/activity for BMI + stats-based targets,
+   plus the water goal (a personal target, lives here rather than
+   inventing a separate settings surface for one number).
+============================================================ */
+const ACTIVITY_LEVELS = [
+  {key:'sedentary', label:'Sedentary — little/no exercise'},
+  {key:'light', label:'Light — 1-3 days/week'},
+  {key:'moderate', label:'Moderate — 3-5 days/week'},
+  {key:'active', label:'Active — 6-7 days/week'},
+  {key:'veryActive', label:'Very active — physical job + training'}
+];
+function latestLoggedWeight(){
+  const sorted = [...state.measurements].filter(m=>m.weight).sort((a,b)=> a.date<b.date?1:-1);
+  return sorted[0] || null;
+}
+// Mirrors server/services/profileService.js#computeBMI exactly — kept here
+// too so the modal can show a live readout without a round-trip.
+function computeBMI(heightCm, weightKg){
+  if(!heightCm || !weightKg) return null;
+  const heightM = heightCm/100;
+  const bmi = weightKg/(heightM*heightM);
+  let category = bmi<18.5?'Underweight':bmi<25?'Normal':bmi<30?'Overweight':'Obese';
+  return {value: Math.round(bmi*10)/10, category};
+}
+function openProfileForm(){
+  draftProfile = state.profile ? {...state.profile} : {heightCm:'', age:'', sex:'male', activityLevel:'moderate', waterTargetL:3, waterIncrementL:1};
+  renderProfileModal();
+}
+function renderProfileModal(){
+  const d = draftProfile;
+  const latestW = latestLoggedWeight();
+  const bmi = computeBMI(Number(d.heightCm), latestW?Number(latestW.weight):null);
+  const html = `
+    <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal-sheet" role="dialog" aria-modal="true">
+        <div class="modal-head"><h2>My Profile</h2><button class="icon-btn" onclick="closeModal()" aria-label="Close">${xIcon()}</button></div>
+        <div class="grid2">
+          <div class="field"><label>Height (cm)</label><input type="number" id="profHeight" value="${d.heightCm}" onchange="draftProfile.heightCm=Number(this.value)||''; refreshBmiPreview();"></div>
+          <div class="field"><label>Age</label><input type="number" value="${d.age}" onchange="draftProfile.age=Number(this.value)||''"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Sex (for BMR calc)</label>
+            <select onchange="draftProfile.sex=this.value">
+              <option value="male" ${d.sex==='male'?'selected':''}>Male</option>
+              <option value="female" ${d.sex==='female'?'selected':''}>Female</option>
+            </select>
+          </div>
+          <div class="field"><label>Activity Level</label>
+            <select onchange="draftProfile.activityLevel=this.value">
+              ${ACTIVITY_LEVELS.map(a=>`<option value="${a.key}" ${d.activityLevel===a.key?'selected':''}>${a.label}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="card" style="background:var(--surface-raised);">
+          <div class="card-head"><h3>BMI</h3></div>
+          <div id="bmiPreview" class="mono">${renderBmiPreview(bmi, latestW)}</div>
+        </div>
+        <div class="divider"></div>
+        <div class="card-head"><h3>Water Goal</h3></div>
+        <div class="grid2">
+          <div class="field"><label>Daily Target (L)</label><input type="number" step="0.5" value="${d.waterTargetL}" onchange="draftProfile.waterTargetL=Number(this.value)||3"></div>
+          <div class="field"><label>Checklist Increment (L)</label><input type="number" step="0.25" value="${d.waterIncrementL}" onchange="draftProfile.waterIncrementL=Number(this.value)||1"></div>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="saveProfile()">Save Profile</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modalRoot').innerHTML = html;
+  document.getElementById('profHeight').focus();
+}
+function renderBmiPreview(bmi, latestW){
+  if(!latestW) return `<div class="muted small">Log a bodyweight entry (Measure tab) to see your BMI.</div>`;
+  if(!bmi) return `<div class="muted small">Enter your height to see your BMI.</div>`;
+  return `<span class="mono">${bmi.value}</span> <span class="small muted">${bmi.category} · using ${latestW.weight}${state.settings.unit} from ${fmtShort(latestW.date)}</span>`;
+}
+function refreshBmiPreview(){
+  const latestW = latestLoggedWeight();
+  const bmi = computeBMI(Number(draftProfile.heightCm), latestW?Number(latestW.weight):null);
+  const el = document.getElementById('bmiPreview');
+  if(el) el.innerHTML = renderBmiPreview(bmi, latestW);
+}
+async function saveProfile(){
+  state.profile = {...draftProfile};
+  const ok = await saveKey('profile', state.profile);
+  closeModal();
+  renderApp();
+  if(ok) showToast("Profile saved","success");
+}
+
+/* ============================================================
+   DIET PLAN — a written plan per meal slot + a dashboard checklist
+   that auto-checks against today's ACTUAL dietLog. No separate
+   self-reported tick: "did I log it" is the honest signal.
+============================================================ */
+function openDietPlanForm(){
+  draftDietPlan = state.dietPlan ? {...state.dietPlan} : Object.fromEntries(MEAL_SLOTS.map(m=>[m.key,'']));
+  renderDietPlanModal();
+}
+function renderDietPlanModal(){
+  const d = draftDietPlan;
+  const html = `
+    <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal-sheet" role="dialog" aria-modal="true">
+        <div class="modal-head"><h2>My Diet Plan</h2><button class="icon-btn" onclick="closeModal()" aria-label="Close">${xIcon()}</button></div>
+        <div class="small muted" style="margin-bottom:10px;">A written plan for what you eat each slot — the Dashboard checks each one off automatically once you've actually logged something there that day.</div>
+        ${MEAL_SLOTS.map(m=>`
+          <div class="field"><label>${m.label}</label><input type="text" value="${escapeHtml(d[m.key]||'')}" placeholder="e.g. 3 eggs + oats" onchange="draftDietPlan['${m.key}']=this.value"></div>
+        `).join('')}
+        <button class="btn btn-primary btn-block" onclick="saveDietPlan()">Save Plan</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modalRoot').innerHTML = html;
+}
+async function saveDietPlan(){
+  state.dietPlan = {...draftDietPlan};
+  const ok = await saveKey('dietPlan', state.dietPlan);
+  closeModal();
+  renderApp();
+  if(ok) showToast("Diet plan saved","success");
+}
+function renderDietPlanCard(){
+  if(!state.dietPlan || Object.values(state.dietPlan).every(v=>!v)){
+    return `
+      <button class="card dash-dietplan" style="text-align:left;width:100%;cursor:pointer;" onclick="openDietPlanForm()">
+        <div class="card-head"><h3>Diet Plan Today</h3></div>
+        <div class="muted small">No plan set — tap to create one.</div>
+      </button>
+    `;
+  }
+  const today = state.dietLog.find(d=>d.date===todayStr());
+  const rows = MEAL_SLOTS.filter(m=>state.dietPlan[m.key]).map(m=>{
+    const done = today && (today.meals[m.key]||[]).length>0;
+    return `<div class="kv-row"><span class="${done?'':'muted'}">${done?'✓':'✗'} ${m.label} — ${escapeHtml(state.dietPlan[m.key])}</span></div>`;
+  }).join('');
+  return `
+    <button class="card dash-dietplan" style="text-align:left;width:100%;cursor:pointer;" onclick="openDietPlanForm()">
+      <div class="card-head"><h3>Diet Plan Today</h3></div>
+      ${rows}
+    </button>
+  `;
+}
+
+/* ============================================================
+   WATER — tap-to-fill checklist, goal/increment from Profile.
+============================================================ */
+function todaysWaterEntry(){
+  return state.waterLog.find(w=>w.date===todayStr());
+}
+function renderWaterCard(){
+  const targetL = state.profile?.waterTargetL || 3;
+  const incrementL = state.profile?.waterIncrementL || 1;
+  const boxCount = Math.max(1, Math.ceil(targetL/incrementL));
+  const todayAmount = todaysWaterEntry()?.amountL || 0;
+  const filled = Math.round(todayAmount/incrementL);
+  const boxes = Array.from({length:boxCount}, (_,i)=>{
+    const isFilled = i < filled;
+    return `<button class="btn ${isFilled?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;" onclick="setWaterLevel(${i})" aria-label="${isFilled?'Filled':'Empty'} ${incrementL}L">${isFilled?'✓':''}</button>`;
+  }).join('');
+  return `
+    <div class="card dash-water">
+      <div class="card-head"><h3>Water</h3><span class="small muted">${todayAmount}/${targetL}L</span></div>
+      <div class="row" style="gap:4px;">${boxes}</div>
+    </div>
+  `;
+}
+async function setWaterLevel(i){
+  const incrementL = state.profile?.waterIncrementL || 1;
+  const date = todayStr();
+  const idx = state.waterLog.findIndex(w=>w.date===date);
+  const currentFilled = idx>=0 ? Math.round(state.waterLog[idx].amountL/incrementL) : 0;
+  // Tapping the topmost already-filled box decrements (correction path);
+  // tapping any other box fills up to it.
+  const newFilled = (i === currentFilled-1) ? i : i+1;
+  const amountL = Math.round(newFilled*incrementL*100)/100;
+  const entry = {id: idx>=0?state.waterLog[idx].id:uid(), date, amountL};
+  if(idx>=0) state.waterLog[idx]=entry; else state.waterLog.push(entry);
+  await saveKey('waterLog', state.waterLog);
+  renderApp();
+}
+
+function renderDashboard(){
+  const today = todayStr();
+  const todaysWorkout = state.workouts.find(w => w.date === today);
+  const todaysDiet = state.dietLog.find(d => d.date === today);
+  const totals = dietTotals(todaysDiet);
+  const targets = state.settings.targets;
+  const sortedMeas = [...state.measurements].sort((a,b)=> a.date < b.date ? 1 : -1);
+  const latestW = sortedMeas.find(m => m.weight);
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-7);
+  const weekAgoStr = weekAgo.toISOString().slice(0,10);
+  const priorW = sortedMeas.filter(m => m.weight && m.date <= weekAgoStr)[0];
+  const delta = (latestW && priorW) ? (latestW.weight - priorW.weight) : null;
+  const streak = trainingStreak();
+
+  // hero priority: a live session beats everything, then today's logged
+  // workout (no volume math — just what was trained), then a program's
+  // due-but-not-yet-done day, then bodyweight on a genuine rest day — the
+  // slot is never empty, which is what keeps a hero panel from going dead.
+  const todaysProgramDay = !todaysWorkout ? getTodaysProgramDay() : null;
+  const heroMode = state.activeSession ? 'session' : todaysWorkout ? 'logged' : todaysProgramDay ? 'due' : 'rest';
+  const heroHasData = heroMode!=='rest' || !!latestW;
+  const heroValue = heroMode==='rest' ? (latestW ? latestW.weight : '') : '';
+  const heroUnit = state.settings.unit;
+  const heroLabel = heroMode==='session' ? `WORKOUT IN PROGRESS · ${escapeHtml(state.activeSession.splitName||'WORKOUT')}`
+    : heroMode==='logged' ? `TODAY · ${escapeHtml((todaysWorkout.split||'WORKOUT').toUpperCase())}${(todaysWorkout.exercises||[]).some(e=>e.isFst7)?' (FST-7)':''}`
+    : heroMode==='due' ? `TODAY'S WORKOUT · ${escapeHtml(todaysProgramDay.splitName.toUpperCase())}`
+    : 'BODYWEIGHT · REST DAY';
+  const heroSub = heroMode==='rest' ? (delta!==null ? `${delta<=0?'▼':'▲'} ${Math.abs(delta).toFixed(1)} ${state.settings.unit} vs 7d ago` : 'Log your weight to start a trend') : '';
+  const sparkVals = sortedMeas.filter(m=>m.weight).slice(0,8).reverse().map(m=>Number(m.weight));
+  const sparkPath = heroMode==='rest' ? sparklinePath(sparkVals, 260, 60) : '';
+
+  return `
+    <div class="dash">
+      <div class="card hero">
+        <div class="hero-label mono">${heroLabel}</div>
+        ${heroMode==='session' ? `
+          <div class="hero-value session-elapsed" style="font-size:clamp(40px,12vw,64px);">--:--</div>
+          <button class="btn btn-primary" style="margin-top:10px;position:relative;z-index:1;" onclick="openExecutionMode()">Resume Workout</button>
+        ` : heroMode==='due' ? `
+          <div class="hero-sub mono" style="margin-top:0;">${todaysProgramDay.exercises?.length||0} exercises planned</div>
+          <button class="btn btn-primary" style="margin-top:14px;position:relative;z-index:1;" onclick="startWorkoutFlow()">START WORKOUT</button>
+        ` : heroMode==='logged' ? `
+          <div class="hero-value">✓<span class="hero-unit mono">logged</span></div>
+          <div class="hero-sub mono">${escapeHtml((todaysWorkout.exercises||[]).map(e=>e.name).join(' · ') || 'no exercises recorded')}</div>
+        ` : heroHasData ? `
+          <div class="hero-value">${heroValue}<span class="hero-unit mono">${heroUnit}</span></div>
+          <div class="hero-sub mono">${heroSub}</div>
+        ` : `
+          <div class="hero-empty">Nothing logged yet — start with a workout or your weight, and this becomes the one number that tells the whole story.</div>
+        `}
+        ${sparkPath ? `<svg class="hero-spark" viewBox="0 0 260 60" preserveAspectRatio="none"><path d="${sparkPath}" fill="none" stroke="var(--acid-core)" stroke-width="2" opacity="0.5"/></svg>` : ''}
+      </div>
+
+      <div class="card dash-fuel">
+        <div class="card-head"><h3>Nutrition Today</h3><span class="mono small muted">${Math.round(totals.calories)} / ${targets.calories} kcal</span></div>
+        ${renderMacroBar('Protein', totals.protein, targets.protein)}
+        ${renderMacroBar('Carbs', totals.carbs, targets.carbs)}
+        ${renderMacroBar('Fat', totals.fat, targets.fat)}
+      </div>
+
+      <div class="card dash-checklist" id="checklistCard"><div class="card-head"><h3>This Week</h3></div><div class="muted small">Loading…</div></div>
+      <div class="stat-card dash-streak">
+        <div class="label">Streak</div>
+        <div class="value ${streak?'accent':''}">${streak}</div>
+        <div class="sub">day${streak===1?'':'s'} training</div>
+      </div>
+
+      <div class="dash-quick">
+        <div class="quickgrid">
+          <button class="qbtn" onclick="openWorkoutForm()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 6.5l11 11M2.5 8.5l3-3a1.5 1.5 0 012 0l9 9a1.5 1.5 0 010 2l-3 3a1.5 1.5 0 01-2 0l-9-9a1.5 1.5 0 010-2z"/></svg>
+            <span class="qlabel">Log Workout</span>
+          </button>
+          <button class="qbtn" onclick="switchTab('fuel'); setTimeout(()=>document.getElementById('aiQuickDesc')?.focus(),0)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a3 3 0 010 6h-1M18 8v10a2 2 0 01-2 2H6a2 2 0 01-2-2V8h14z"/></svg>
+            <span class="qlabel">Log Meal</span>
+          </button>
+          <button class="qbtn" onclick="openMeasurementForm()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17V7a1 1 0 011-1h16a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1z"/></svg>
+            <span class="qlabel">Log Weight</span>
+          </button>
+          <button class="qbtn" onclick="switchTab('photos'); setTimeout(openPhotoForm,0)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.2"/></svg>
+            <span class="qlabel">Add Photo</span>
+          </button>
+        </div>
+      </div>
+
+      ${renderDietPlanCard()}
+      ${renderWaterCard()}
+    </div>
+  `;
+}
+function renderMacroBar(label, val, target, unit){
+  // Color encodes STATE (how close to target), not macro identity — the label
+  // already says which macro this is, so identity-by-hue was a wasted channel.
+  unit = unit || 'g';
+  const pct = target ? Math.round(val/target*100) : 0;
+  const shown = Math.min(100, pct);
+  const over = Math.max(0, pct-100);
+  const onTarget = pct>=100 && pct<=105;
+  let fill = 'var(--acid-deep)';       // < 85%: quiet, work to do
+  if(pct>=85 && pct<100) fill = 'var(--acid-core)';   // closing in
+  if(onTarget) fill = 'var(--acid)';                   // hit it — the glow moment
+  const glow = onTarget ? 'box-shadow:0 0 10px var(--acid-glow);' : '';
+  return `
+    <div class="macrobar">
+      <div class="macrobar-top"><span class="muted">${label}</span><span class="mono ${pct>100?'warn-text':''}">${onTarget?'✓ ':''}${Math.round(val)} / ${target}${unit}${pct>100?' ('+(pct-100)+'% over)':''}</span></div>
+      <div class="macrobar-track">
+        <div class="macrobar-fill" style="width:${shown}%;background:${fill};${glow}"></div>
+        ${over>0 ? `<div class="macrobar-over" style="left:${Math.max(0,100-over)}%;width:${Math.min(over,100)}%;"></div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   CHARTS — one shared drawing routine, measured viewBox,
+   axes/gridlines/hover. Called post-render (two-pass), like
+   renderPhaseBadge already does.
+============================================================ */
+function niceStep(rough){
+  const mag = Math.pow(10, Math.floor(Math.log10(rough||1)));
+  const n = rough/mag;
+  const step = n<1.5?1:n<3?2:n<7?5:10;
+  return step*mag;
+}
+function niceCeil(max, ticks){
+  const step = niceStep(max/(ticks-1));
+  return {step, ceil: Math.ceil(max/step)*step};
+}
+function drawChart(containerId, opts){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const {points, zeroBased, unit, fmtVal, fmtX, areaFill, extraSeries} = opts;
+  if(!points || points.length < 2) return; // empty message already in template
+  const width = Math.max(240, el.clientWidth || 600);
+  const H = window.innerWidth >= 1024 ? 220 : 180;
+  const pad = {t:16, r:14, b:26, l:44};
+  const vals = points.map(p=>p.y);
+  let yMin, yMax;
+  if(zeroBased){
+    const {ceil} = niceCeil(Math.max(...vals,1), 4);
+    yMin = 0; yMax = ceil;
+  } else {
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    const range = (hi-lo)||1;
+    yMin = Math.floor((lo - range*0.15)*2)/2;
+    yMax = Math.ceil((hi + range*0.15)*2)/2;
+  }
+  const plotW = width - pad.l - pad.r, plotH = H - pad.t - pad.b;
+  const xAt = i => pad.l + (points.length===1?0:i*(plotW/(points.length-1)));
+  const yAt = v => pad.t + plotH - ((v-yMin)/(yMax-yMin||1))*plotH;
+
+  const pts = points.map((p,i)=>[xAt(i), yAt(p.y)]);
+  const path = pts.map((p,i)=>(i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+
+  let gridSvg = '';
+  const ticks = 4;
+  for(let i=0;i<=ticks;i++){
+    const v = yMin + (yMax-yMin)*(i/ticks);
+    const y = yAt(v);
+    gridSvg += `<line x1="${pad.l}" y1="${y.toFixed(1)}" x2="${width-pad.r}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1"/>`;
+    gridSvg += `<text x="${pad.l-8}" y="${(y+3).toFixed(1)}" text-anchor="end" class="mono" font-size="10" fill="var(--ink-3)">${fmtVal(v)}</text>`;
+  }
+
+  let areaSvg = '';
+  if(areaFill){
+    const gid = containerId+'-grad';
+    const base = yAt(Math.max(yMin,0));
+    const areaPath = path + ` L${pts[pts.length-1][0].toFixed(1)},${base.toFixed(1)} L${pts[0][0].toFixed(1)},${base.toFixed(1)} Z`;
+    areaSvg = `<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--acid)" stop-opacity="0.28"/>
+        <stop offset="100%" stop-color="var(--acid)" stop-opacity="0"/>
+      </linearGradient></defs>
+      <path d="${areaPath}" fill="url(#${gid})"/>`;
+  }
+
+  let extraSvg = '';
+  if(extraSeries){
+    const epts = extraSeries.map((v,i)=>[xAt(i), yAt(v)]);
+    const epath = epts.filter(p=>!isNaN(p[1])).map((p,i)=>(i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+    extraSvg = `<path d="${epath}" fill="none" stroke="var(--ink-3)" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+  }
+
+  const dotsSvg = pts.map((p,i)=> i===pts.length-1
+    ? `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="5" fill="var(--acid)" stroke="var(--surface)" stroke-width="2"/>`
+    : `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4" fill="var(--acid)" stroke="var(--surface)" stroke-width="2"/>`
+  ).join('');
+
+  const xLabels = [];
+  const showEvery = window.innerWidth >= 1024 ? Math.max(1, Math.ceil(points.length/8)) : Math.max(1, points.length-1);
+  const idxs = window.innerWidth >= 1024 ? points.map((_,i)=>i).filter(i=>i%showEvery===0) : [0, points.length-1];
+  [...new Set(idxs)].forEach(i=>{
+    xLabels.push(`<text x="${xAt(i).toFixed(1)}" y="${H-6}" text-anchor="${i===0?'start':(i===points.length-1?'end':'middle')}" class="mono" font-size="10" fill="var(--ink-3)">${fmtX(points[i].x)}</text>`);
+  });
+
+  const endLabel = `<text x="${pts[pts.length-1][0].toFixed(1)}" y="${(pts[pts.length-1][1]-10).toFixed(1)}" text-anchor="end" class="mono" font-size="11" fill="var(--chalk)" font-weight="700">${fmtVal(points[points.length-1].y)}${unit||''}</text>`;
+
+  chartData[containerId] = {points, xAt, yAt, fmtVal, fmtX, unit};
+
+  el.innerHTML = `
+    <svg viewBox="0 0 ${width} ${H}" width="${width}" height="${H}" role="img" aria-label="${escapeHtml((opts.ariaLabel||'chart'))}"
+      onpointermove="chartHover(event,'${containerId}')" onpointerleave="chartOut('${containerId}')">
+      <title>${escapeHtml(opts.ariaLabel||'')}</title>
+      ${gridSvg}
+      ${areaSvg}
+      ${extraSvg}
+      <path d="${path}" fill="none" stroke="var(--acid)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dotsSvg}
+      ${endLabel}
+      ${xLabels.join('')}
+      <line id="${containerId}-cross" x1="0" y1="${pad.t}" x2="0" y2="${H-pad.b}" stroke="var(--ink-3)" stroke-width="1" style="display:none;"/>
+    </svg>
+    <div class="chart-tooltip" id="${containerId}-tip"></div>
+  `;
+}
+function chartHover(evt, id){
+  const d = chartData[id];
+  if(!d) return;
+  const svg = evt.currentTarget;
+  const rect = svg.getBoundingClientRect();
+  const scaleX = svg.viewBox.baseVal.width / rect.width;
+  const localX = (evt.clientX - rect.left) * scaleX;
+  let nearest = 0, best = Infinity;
+  d.points.forEach((p,i)=>{ const dx = Math.abs(d.xAt(i)-localX); if(dx<best){best=dx;nearest=i;} });
+  const cross = document.getElementById(id+'-cross');
+  const tip = document.getElementById(id+'-tip');
+  if(cross){ cross.style.display='block'; cross.setAttribute('x1', d.xAt(nearest)); cross.setAttribute('x2', d.xAt(nearest)); }
+  if(tip){
+    tip.style.display='block';
+    tip.style.left = ((d.xAt(nearest)/svg.viewBox.baseVal.width)*rect.width)+'px';
+    tip.style.top = ((d.yAt(d.points[nearest].y)/svg.viewBox.baseVal.height)*rect.height)+'px';
+    tip.textContent = `${d.fmtX(d.points[nearest].x)} · ${d.fmtVal(d.points[nearest].y)}${d.unit||''}`;
+  }
+}
+function chartOut(id){
+  const cross = document.getElementById(id+'-cross');
+  const tip = document.getElementById(id+'-tip');
+  if(cross) cross.style.display='none';
+  if(tip) tip.style.display='none';
+}
+function movingAvg(vals, window){
+  return vals.map((_,i)=>{
+    const start = Math.max(0,i-window+1);
+    const slice = vals.slice(start,i+1);
+    return slice.reduce((a,b)=>a+b,0)/slice.length;
+  });
+}
+function drawWeightChart(){
+  const list = [...state.measurements].filter(m=>m.weight).sort((a,b)=> a.date<b.date?-1:1).slice(-20);
+  const el = document.getElementById('ch-weight');
+  if(!el) return;
+  if(list.length < 2) return;
+  const points = list.map(m=>({x:m.date, y:Number(m.weight)}));
+  const avg = movingAvg(points.map(p=>p.y), 7);
+  drawChart('ch-weight', {
+    points, zeroBased:false, unit:state.settings.unit, areaFill:false, extraSeries:avg,
+    fmtVal:v=>v.toFixed(1), fmtX:fmtShort,
+    ariaLabel:'Bodyweight trend, last 20 weigh-ins, with 7-day average'
+  });
+}
+
+/* ============================================================
+   TRAIN TAB
+============================================================ */
+function renderTrain(){
+  const sorted = [...state.workouts].sort((a,b)=> a.date < b.date ? 1 : -1);
+  const activeProgram = getActiveProgram();
+  return `
+    <div class="section-row">
+      <div class="section-title">Train</div>
+      <button class="icon-btn" onclick="openProgramManager()" title="Manage programs" aria-label="Manage programs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a7.9 7.9 0 000-3l1.9-1.5-2-3.4-2.2.7a8 8 0 00-2.6-1.5L14 2h-4l-.5 2.3a8 8 0 00-2.6 1.5l-2.2-.7-2 3.4L4.6 10.5a7.9 7.9 0 000 3L2.7 15l2 3.4 2.2-.7a8 8 0 002.6 1.5L10 22h4l.5-2.3a8 8 0 002.6-1.5l2.2.7 2-3.4z"/></svg>
+      </button>
+    </div>
+
+    ${state.activeSession ? `
+      <div class="card" style="border-color:var(--line-acid);">
+        <div class="card-head"><h3 class="accent">Workout in progress</h3><span class="mono small session-elapsed" style="color:var(--acid);">--:--</span></div>
+        <div class="small muted">${escapeHtml(state.activeSession.splitName||'Workout')} · exercise ${state.activeSession.exercises.length?state.activeSession.exerciseIdx+1:0}/${state.activeSession.exercises.length}</div>
+        <button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="openExecutionMode()">Resume</button>
+      </div>
+    ` : ''}
+
+    <div class="card" id="checklistCard"><div class="card-head"><h3>This Week</h3></div><div class="muted small">Loading…</div></div>
+
+    <div class="card">
+      <div class="card-head"><h3>Program</h3></div>
+      ${activeProgram ? `
+        <div class="hist-title">${escapeHtml(activeProgram.name)}</div>
+        <div class="small muted">${activeProgram.days.length} day${activeProgram.days.length===1?'':'s'}/week scheduled</div>
+        ${!state.activeSession ? `<button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="openWorkoutDayPicker()">START WORKOUT</button>` : ''}
+      ` : `
+        <div class="small muted">No program yet — build one to unlock the weekly checklist and Start Workout.</div>
+        <button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="openProgramBuilder()">+ Build a Program</button>
+      `}
+    </div>
+
+    <button class="btn btn-ghost btn-block" onclick="openWorkoutForm()">+ Log a workout manually</button>
+    <div class="card-head" style="margin-top:var(--s4);"><h3>Past Workouts</h3></div>
+    ${sorted.length===0 ? emptyState('No sessions yet','Log your first workout to start tracking FST-7 progress.', '+ New Workout','openWorkoutForm()') :
+      `<div id="train-hist">${sorted.map(w => renderWorkoutHistItem(w)).join('')}</div>`}
+
+    ${renderCardioSection()}
+  `;
+}
+function emptyState(title, body, ctaLabel, ctaFn){
+  return `<div class="empty-state"><div class="display">${escapeHtml(title)}</div>${escapeHtml(body)}
+    ${ctaLabel ? `<div><button class="btn btn-primary" onclick="${ctaFn}">${escapeHtml(ctaLabel)}</button></div>` : ''}
+  </div>`;
+}
+
+/* ============================================================
+   CARDIO — kept deliberately separate from the strength-training
+   streak/checklist this round: a logging feature, not wired into
+   completion math.
+============================================================ */
+const CARDIO_TYPES = ['Run','Treadmill','Bike','Cross Trainer','Row','Swim','Elliptical','Walk','Other'];
+function renderCardioSection(){
+  const sorted = [...state.cardioLog].sort((a,b)=> a.date<b.date?1:-1);
+  return `
+    <div class="card-head" style="margin-top:var(--s4);"><h3>Cardio</h3></div>
+    <button class="btn btn-ghost btn-block" onclick="openCardioForm()">+ Log Cardio</button>
+    ${sorted.length===0 ? `<div class="muted small" style="padding:var(--s3) 0;">No cardio logged yet.</div>` :
+      sorted.map(c => `
+        <div class="hist-item" style="margin-top:var(--s3);">
+          <div class="hist-top" style="cursor:default;">
+            <div>
+              <div class="hist-date mono">${fmtDate(c.date)}</div>
+              <div class="hist-title">${escapeHtml(c.type)}${c.distance?` · ${c.distance}${state.settings.unit==='lb'?'mi':'km'}`:''}</div>
+              <div class="small muted">${c.duration} min${c.notes?' · '+escapeHtml(c.notes):''}</div>
+            </div>
+            <button class="icon-btn" onclick="deleteCardio('${c.id}')" aria-label="Delete">${xIcon()}</button>
+          </div>
+        </div>
+      `).join('')}
+  `;
+}
+function openCardioForm(){
+  draftCardio = { date: todayStr(), type: 'Run', duration: '', distance: '', notes: '' };
+  renderCardioModal();
+}
+function renderCardioModal(){
+  const d = draftCardio;
+  const html = `
+    <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal-sheet" role="dialog" aria-modal="true">
+        <div class="modal-head"><h2>Log Cardio</h2><button class="icon-btn" onclick="closeModal()" aria-label="Close">${xIcon()}</button></div>
+        <div class="row">
+          <div class="field"><label>Date</label><input type="date" value="${d.date}" onchange="draftCardio.date=this.value"></div>
+          <div class="field"><label>Type</label>
+            <select onchange="draftCardio.type=this.value">
+              ${CARDIO_TYPES.map(t=>`<option value="${t}" ${d.type===t?'selected':''}>${t}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Duration (min)</label><input type="number" id="cardioDuration" value="${d.duration}" onchange="draftCardio.duration=this.value"></div>
+          <div class="field"><label>Distance (${state.settings.unit==='lb'?'mi':'km'}, optional)</label><input type="number" step="0.1" value="${d.distance}" onchange="draftCardio.distance=this.value"></div>
+        </div>
+        <div class="field"><label>Notes (optional)</label><input type="text" value="${escapeHtml(d.notes)}" onchange="draftCardio.notes=this.value"></div>
+        <button class="btn btn-primary btn-block" onclick="saveCardio()">Save</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modalRoot').innerHTML = html;
+  document.getElementById('cardioDuration').focus();
+}
+async function saveCardio(){
+  if(!draftCardio.duration){ showToast("Enter a duration"); return; }
+  state.cardioLog.push({
+    id: uid(), date: draftCardio.date, type: draftCardio.type,
+    duration: Number(draftCardio.duration)||0,
+    distance: draftCardio.distance===''? null : Number(draftCardio.distance)||0,
+    notes: draftCardio.notes||''
+  });
+  const ok = await saveKey('cardioLog', state.cardioLog);
+  closeModal();
+  switchTab('train');
+  if(ok) showToast("Cardio logged","success");
+}
+function deleteCardio(id){
+  confirmSheet("Delete this cardio entry?", async ()=>{
+    state.cardioLog = state.cardioLog.filter(c=>c.id!==id);
+    await saveKey('cardioLog', state.cardioLog);
+    renderApp();
+    showToast("Deleted","success");
+  });
+}
+function renderWorkoutHistItem(w){
+  const expanded = expandedWorkouts.has(w.id);
+  return `
+    <div class="hist-item">
+      <button class="hist-top" onclick="toggleWorkoutExpand('${w.id}')" aria-expanded="${expanded}">
+        <div>
+          <div class="hist-date mono">${fmtDate(w.date)}</div>
+          <div class="hist-title">${escapeHtml(w.split || 'Workout')}</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="small muted">${(w.exercises||[]).length} exercise${(w.exercises||[]).length===1?'':'s'}</div>
+          ${(w.exercises||[]).some(e=>e.isFst7) ? `<span class="tag-pill tag-fst">FST-7</span>` : ''}
+        </div>
+      </button>
+      ${expanded ? `
+        <div class="hist-body">
+          ${(w.exercises||[]).map(ex => `
+            <div style="margin-bottom:8px;">
+              <div><b>${escapeHtml(ex.name)}</b> ${ex.isFst7 ? '<span class="tag-pill tag-fst">FST-7</span>' : ''}</div>
+              <div class="mono small">${(ex.sets||[]).map(s=> `${s.weight||0}×${s.reps||0}`).join('  ·  ')}</div>
+            </div>
+          `).join('')}
+          <div class="hist-actions">
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); deleteWorkout('${w.id}')">Delete</button>
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+function toggleWorkoutExpand(id){
+  if(expandedWorkouts.has(id)) expandedWorkouts.delete(id); else expandedWorkouts.add(id);
+  renderApp();
+}
+function deleteWorkout(id){
+  confirmSheet("Delete this workout? This can't be undone.", async ()=>{
+    state.workouts = state.workouts.filter(w => w.id !== id);
+    await saveKey('workouts', state.workouts);
+    renderApp();
+    showToast("Workout deleted","success");
+  });
+}
+
+/* ---- Workout Form (modal) — stable uids per exercise, targeted re-render ---- */
+function openWorkoutForm(){
+  draftWorkout = { date: todayStr(), split: "", exercises: [] };
+  addDraftExercise();
+  renderWorkoutModal();
+}
+function findEx(uidStr){ return draftWorkout.exercises.find(e=>e.uid===uidStr); }
+function findExIdx(uidStr){ return draftWorkout.exercises.findIndex(e=>e.uid===uidStr); }
+function addDraftExercise(){
+  draftWorkout.exercises.push({ uid: uid(), name:"", isFst7:false, sets:[{weight:"",reps:""}], restSecLeft:0, restTotal:0 });
+  renderWorkoutModal();
+}
+function removeDraftExercise(exUid){
+  stopRestTimer(exUid);
+  draftWorkout.exercises = draftWorkout.exercises.filter(e=>e.uid!==exUid);
+  renderWorkoutModal();
+}
+function rerenderExerciseBlock(exUid){
+  const ex = findEx(exUid);
+  const el = document.getElementById('exBlock-'+exUid);
+  if(ex && el) el.outerHTML = renderExerciseBlock(ex);
+}
+function addDraftSet(exUid){
+  findEx(exUid).sets.push({weight:"", reps:""});
+  rerenderExerciseBlock(exUid);
+}
+function removeDraftSet(exUid, setIdx){
+  findEx(exUid).sets.splice(setIdx,1);
+  rerenderExerciseBlock(exUid);
+}
+function toggleFst7(exUid){
+  const ex = findEx(exUid);
+  ex.isFst7 = !ex.isFst7;
+  if(!ex.isFst7) stopRestTimer(exUid);
+  rerenderExerciseBlock(exUid);
+}
+function updateDraftExerciseName(exUid, val){ findEx(exUid).name = val; }
+function updateDraftSplit(val){ draftWorkout.split = val; }
+function updateDraftDate(val){ draftWorkout.date = val; }
+function updateDraftSet(exUid, setIdx, field, val){
+  const ex = findEx(exUid);
+  ex.sets[setIdx][field] = val;
+  // live-update the gauge's fill count as you type, WITHOUT re-rendering the
+  // inputs themselves — a full block re-render mid-keystroke would drop focus.
+  if(ex.isFst7){
+    const panel = document.getElementById('gaugePanel-'+exUid);
+    if(panel) panel.outerHTML = renderGauge7(ex);
+  }
+}
+
+function stopRestTimer(exUid){
+  if(restIntervals.has(exUid)){ clearInterval(restIntervals.get(exUid)); restIntervals.delete(exUid); }
+}
+function stopAllRestTimers(){
+  restIntervals.forEach(id=>clearInterval(id));
+  restIntervals.clear();
+}
+const REST_RING_R = 15;
+const REST_RING_C = 2*Math.PI*REST_RING_R;
+function startRestTimer(exUid, seconds){
+  const ex = findEx(exUid);
+  if(!ex) return;
+  stopRestTimer(exUid);
+  ex.restTotal = seconds;
+  ex.restSecLeft = seconds;
+  rerenderExerciseBlock(exUid);
+  const iv = setInterval(()=>{
+    ex.restSecLeft -= 1;
+    const circle = document.getElementById(`rest-ring-c-${exUid}`);
+    const txt = document.getElementById(`rest-txt-${exUid}`);
+    if(circle){
+      const pct = Math.max(0, 1 - ex.restSecLeft/ex.restTotal);
+      circle.style.strokeDashoffset = (REST_RING_C * (1-pct)).toFixed(1);
+    }
+    if(txt) txt.innerHTML = ex.restSecLeft > 0 ? `<b>${ex.restSecLeft}s</b>` : `<b>Stretch 10–15s</b>`;
+    if(ex.restSecLeft <= 0){ stopRestTimer(exUid); }
+  }, 1000);
+  restIntervals.set(exUid, iv);
+}
+
+function renderWorkoutModal(){
+  if(!draftWorkout) return;
+  const names = allExerciseNames();
+  const html = `
+    <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal-sheet" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <h2>New Workout</h2>
+          <button class="icon-btn" onclick="closeModal()" aria-label="Close">${xIcon()}</button>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Date</label>
+            <input type="date" value="${draftWorkout.date}" onchange="updateDraftDate(this.value)">
+          </div>
+          <div class="field">
+            <label>Split</label>
+            <input type="text" list="splitList" placeholder="e.g. Chest + Back (FST-7)" value="${escapeHtml(draftWorkout.split)}" onchange="updateDraftSplit(this.value)">
+            <datalist id="splitList">
+              <option value="Push"><option value="Pull"><option value="Legs">
+              <option value="Chest + Back"><option value="Arms + Shoulders">
+              <option value="Legs (FST-7 Finisher)"><option value="Upper Body"><option value="Full Body">
+            </datalist>
+          </div>
+        </div>
+        <datalist id="exNames">${names.map(n=>`<option value="${escapeHtml(n)}">`).join('')}</datalist>
+        <div class="divider"></div>
+        <div id="exercisesWrap">
+          ${draftWorkout.exercises.map(ex=> renderExerciseBlock(ex)).join('')}
+        </div>
+        <button class="btn btn-ghost btn-block" onclick="addDraftExercise()">+ Add Exercise</button>
+        <button class="btn btn-primary btn-block" onclick="saveWorkout()">Save Workout</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modalRoot').innerHTML = html;
+  document.getElementById('modalRoot').querySelector('.modal-sheet')?.querySelector('input')?.focus();
+}
+function xIcon(){
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>`;
+}
+function renderExerciseBlock(ex){
+  return `
+    <div class="exercise-block" id="exBlock-${ex.uid}">
+      <div class="exercise-block-head">
+        <input class="exercise-name-input" type="text" list="exNames" placeholder="Exercise name" value="${escapeHtml(ex.name)}" onchange="updateDraftExerciseName('${ex.uid}', this.value)">
+        <button class="icon-btn" onclick="removeDraftExercise('${ex.uid}')" title="Remove exercise" aria-label="Remove exercise">${xIcon()}</button>
+      </div>
+      <div class="chk-wrap" style="margin-bottom:10px;">
+        <input type="checkbox" id="fst-${ex.uid}" ${ex.isFst7?'checked':''} onchange="toggleFst7('${ex.uid}')">
+        <label for="fst-${ex.uid}" style="margin:0;text-transform:none;font-weight:500;color:var(--ink-2);">FST-7 finisher (7 burnout sets, short rest, stretch the fascia)</label>
+      </div>
+      ${ex.isFst7 ? renderGauge7(ex) : ''}
+      ${ex.sets.map((s, j)=> `
+        <div class="set-row">
+          <div class="idx mono">${j+1}</div>
+          <input type="number" inputmode="decimal" placeholder="Weight (${state.settings.unit})" value="${s.weight}" oninput="updateDraftSet('${ex.uid}',${j},'weight',this.value)">
+          <input type="number" inputmode="numeric" placeholder="Reps" value="${s.reps}" oninput="updateDraftSet('${ex.uid}',${j},'reps',this.value)">
+          <button class="icon-btn" onclick="removeDraftSet('${ex.uid}',${j})" aria-label="Remove set">${xIcon()}</button>
+        </div>
+      `).join('')}
+      <button class="btn btn-ghost btn-sm" onclick="addDraftSet('${ex.uid}')">+ Set</button>
+    </div>
+  `;
+}
+function renderGauge7(ex){
+  const filled = ex.sets.filter(s => s.weight!=="" && s.reps!=="").length;
+  const activeIdx = filled<7 ? filled : -1;
+  const segs = Array.from({length:7}, (_,k)=>{
+    const isFilled = k < filled;
+    const isActive = k === activeIdx;
+    const color = isFilled ? `background:${lerpAcid(k/6)};` : '';
+    return `<div class="seg ${isFilled?'filled':''} ${isActive?'pulse':''}"><div class="fill" style="${color}"></div></div>`;
+  }).join('');
+  const running = ex.restSecLeft > 0 || ex.restTotal > 0;
+  const pct = ex.restTotal ? Math.max(0, 1 - ex.restSecLeft/ex.restTotal) : 0;
+  const restRow = running ? `
+    <div class="rest-timer">
+      <svg class="ring" viewBox="0 0 36 36">
+        <circle cx="18" cy="18" r="${REST_RING_R}" fill="none" stroke="var(--surface)" stroke-width="3"/>
+        <circle id="rest-ring-c-${ex.uid}" cx="18" cy="18" r="${REST_RING_R}" fill="none" stroke="var(--acid)" stroke-width="3"
+          stroke-linecap="round" stroke-dasharray="${REST_RING_C.toFixed(1)}" stroke-dashoffset="${(REST_RING_C*(1-pct)).toFixed(1)}"
+          transform="rotate(-90 18 18)"/>
+      </svg>
+      <div class="txt" id="rest-txt-${ex.uid}">${ex.restSecLeft>0 ? `<b>${ex.restSecLeft}s</b> rest` : '<b>Stretch 10–15s</b>'}</div>
+    </div>` : '';
+  return `
+    <div class="gauge7-panel" id="gaugePanel-${ex.uid}">
+      <div class="gauge7">${segs}</div>
+      <div class="small muted">${filled}/7 sets · keep rest to 25–35s, hold a deep stretch after the last set</div>
+      <button type="button" class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="startRestTimer('${ex.uid}', 30)">Start 30s Rest</button>
+      ${restRow}
+    </div>
+  `;
+}
+async function saveWorkout(){
+  if(draftWorkout.exercises.length === 0 || draftWorkout.exercises.every(e=>!e.name)){
+    showToast("Add at least one exercise");
+    return;
+  }
+  stopAllRestTimers();
+  const clean = {
+    id: uid(),
+    date: draftWorkout.date,
+    split: draftWorkout.split || "Workout",
+    exercises: draftWorkout.exercises
+      .filter(e => e.name)
+      .map(e => ({ uid:e.uid, name:e.name, isFst7:e.isFst7, sets:e.sets.filter(s=>s.weight!=="" || s.reps!=="") }))
+  };
+  state.workouts.push(clean);
+  clean.exercises.forEach(e=>{
+    if(!EXERCISE_LIBRARY_DEFAULT.includes(e.name) && !state.exerciseLibrary.includes(e.name)){
+      state.exerciseLibrary.push(e.name);
+    }
+  });
+  await saveKey('workouts', state.workouts);
+  await saveKey('exerciseLibrary', state.exerciseLibrary);
+  draftWorkout = null;
+  closeModal();
+  switchTab('train');
+  showToast("Workout saved 💪","success");
+}
+
+function closeModal(){
+  stopAllRestTimers();
+  document.getElementById('modalRoot').innerHTML = "";
+  draftWorkout = null; draftMeasurement = null; draftPhoto = null; draftProgram = null;
+  draftSteps = null; draftCardio = null; draftProfile = null; draftDietPlan = null;
+}
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape'){
+    const overlay = document.querySelector('.modal-overlay');
+    if(overlay){ closeModal(); }
+    const lightbox = document.querySelector('.lightbox');
+    if(lightbox){ closeLightbox(); }
+  }
+});
+
+/* ============================================================
+   WORKOUT PROGRAM BUILDER — named plans, days mapped to weekdays,
+   each day holding exercise templates. Lives in the `programs` kv
+   collection server-side; CRUD goes through /api/programs.
+============================================================ */
+const WEEKDAY_LABELS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+function openProgramManager(){
+  renderProgramManagerModal();
+}
+function renderProgramManagerModal(){
+  const html = `
+    <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal-sheet" role="dialog" aria-modal="true">
+        <div class="modal-head"><h2>Programs</h2><button class="icon-btn" onclick="closeModal()" aria-label="Close">${xIcon()}</button></div>
+        <button class="btn btn-primary btn-block" onclick="openProgramBuilder()">+ Build New Program</button>
+        <div class="divider"></div>
+        ${state.programs.length===0 ? `<div class="muted small">No programs yet — build one to unlock Start Workout and the weekly checklist.</div>` :
+          state.programs.map(p=>`
+            <div class="hist-item" style="margin-bottom:10px;">
+              <div class="hist-top" style="cursor:default;">
+                <div>
+                  <div class="hist-title">${escapeHtml(p.name)} ${p.active?'<span class="tag-pill tag-fst">ACTIVE</span>':''}</div>
+                  <div class="small muted">${p.days.length} day${p.days.length===1?'':'s'}/week scheduled</div>
+                </div>
+              </div>
+              <div class="hist-actions">
+                ${!p.active?`<button class="btn btn-ghost btn-sm" onclick="activateProgram('${p.id}')">Activate</button>`:''}
+                <button class="btn btn-ghost btn-sm" onclick="openProgramBuilder('${p.id}')">Edit</button>
+                <button class="btn btn-ghost btn-sm" onclick="deleteProgramConfirm('${p.id}')">Delete</button>
+              </div>
+            </div>
+          `).join('')}
+      </div>
+    </div>
+  `;
+  document.getElementById('modalRoot').innerHTML = html;
+}
+async function activateProgram(id){
+  try{
+    const res = await apiSend('/programs/'+id+'/activate', 'POST');
+    state.programs = res.programs;
+    renderProgramManagerModal();
+    renderApp();
+    showToast("Program activated","success");
+  }catch(e){ showToast("Couldn't activate — server error","error"); }
+}
+function deleteProgramConfirm(id){
+  confirmSheet("Delete this program? Workouts you've already logged stay in your history.", async ()=>{
+    try{
+      const res = await apiSend('/programs/'+id, 'DELETE');
+      state.programs = res.programs;
+      renderProgramManagerModal();
+      renderApp();
+      showToast("Program deleted","success");
+    }catch(e){ showToast("Couldn't delete — server error","error"); }
+  });
+}
+
+function openProgramBuilder(programId){
+  const existing = programId ? state.programs.find(p=>p.id===programId) : null;
+  draftProgram = existing
+    ? { id: existing.id, name: existing.name, days: Array.from({length:7},(_,w)=>{
+        const d = existing.days.find(dd=>dd.weekday===w);
+        return d ? { weekday:w, active:true, splitName:d.splitName, exercises: d.exercises.map(e=>({...e})) } : { weekday:w, active:false, splitName:'', exercises:[] };
+      }) }
+    : { id:null, name:'', days: Array.from({length:7},(_,w)=>({weekday:w, active:false, splitName:'', exercises:[]})) };
+  renderProgramBuilderModal();
+}
+function renderProgramBuilderModal(){
+  const names = allExerciseNames();
+  const html = `
+    <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal-sheet" role="dialog" aria-modal="true">
+        <div class="modal-head"><h2>${draftProgram.id?'Edit Program':'Build Program'}</h2><button class="icon-btn" onclick="closeModal()" aria-label="Close">${xIcon()}</button></div>
+        <div class="field"><label>Program Name</label><input type="text" placeholder="e.g. Push Pull Legs" value="${escapeHtml(draftProgram.name)}" onchange="draftProgram.name=this.value"></div>
+        <datalist id="exNamesProgram">${names.map(n=>`<option value="${escapeHtml(n)}">`).join('')}</datalist>
+        <div id="programDaysWrap">${draftProgram.days.map(d=>renderProgramDay(d)).join('')}</div>
+        <button class="btn btn-primary btn-block" onclick="saveProgramBuilder()">Save Program</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modalRoot').innerHTML = html;
+}
+function findProgramDay(weekday){ return draftProgram.days.find(d=>d.weekday===weekday); }
+function rerenderProgramDay(weekday){
+  const el = document.getElementById('progDay-'+weekday);
+  if(el) el.outerHTML = renderProgramDay(findProgramDay(weekday));
+}
+function renderProgramDay(d){
+  return `
+    <div class="exercise-block" id="progDay-${d.weekday}" style="margin-bottom:10px;">
+      <div class="chk-wrap">
+        <input type="checkbox" id="dayOn-${d.weekday}" ${d.active?'checked':''} onchange="toggleProgramDay(${d.weekday})">
+        <label for="dayOn-${d.weekday}" style="margin:0;text-transform:none;font-weight:700;color:var(--chalk);">${WEEKDAY_LABELS[d.weekday]}</label>
+      </div>
+      ${d.active ? `
+        <div class="field" style="margin-top:10px;"><label>Split Name</label><input type="text" placeholder="e.g. Push" value="${escapeHtml(d.splitName)}" onchange="updateProgramDaySplit(${d.weekday}, this.value)"></div>
+        ${d.exercises.map((ex,i)=>renderProgramExerciseRow(d.weekday, ex, i)).join('')}
+        <button class="btn btn-ghost btn-sm" onclick="addProgramExercise(${d.weekday})">+ Add Exercise</button>
+      ` : ''}
+    </div>
+  `;
+}
+function renderProgramExerciseRow(weekday, ex, i){
+  return `
+    <div class="card" style="background:var(--surface);margin-bottom:8px;padding:10px;">
+      <div class="row">
+        <input type="text" list="exNamesProgram" placeholder="Exercise name" value="${escapeHtml(ex.name||'')}" onchange="updateProgramExercise(${weekday},${i},'name',this.value)">
+        <button class="icon-btn" onclick="removeProgramExercise(${weekday},${i})" aria-label="Remove exercise" style="flex:0 0 auto;">${xIcon()}</button>
+      </div>
+      <div class="grid3" style="margin-top:8px;">
+        <div class="field"><label>Sets</label><input type="number" value="${ex.targetSets ?? 3}" onchange="updateProgramExercise(${weekday},${i},'targetSets',this.value)"></div>
+        <div class="field"><label>Reps</label><input type="text" value="${escapeHtml(String(ex.targetReps ?? '8-12'))}" onchange="updateProgramExercise(${weekday},${i},'targetReps',this.value)"></div>
+        <div class="field"><label>Weight (${state.settings.unit})</label><input type="number" value="${ex.targetWeight ?? ''}" onchange="updateProgramExercise(${weekday},${i},'targetWeight',this.value)"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Rest (sec)</label><input type="number" value="${ex.restSec ?? 60}" onchange="updateProgramExercise(${weekday},${i},'restSec',this.value)"></div>
+        <div class="field"><label>Muscle Group</label><input type="text" value="${escapeHtml(ex.muscleGroup||'')}" onchange="updateProgramExercise(${weekday},${i},'muscleGroup',this.value)"></div>
+      </div>
+      <div class="field"><label>Notes</label><input type="text" value="${escapeHtml(ex.notes||'')}" onchange="updateProgramExercise(${weekday},${i},'notes',this.value)"></div>
+    </div>
+  `;
+}
+function toggleProgramDay(weekday){
+  const d = findProgramDay(weekday);
+  d.active = !d.active;
+  if(d.active && !d.splitName) d.splitName = 'Workout';
+  rerenderProgramDay(weekday);
+}
+function updateProgramDaySplit(weekday, val){ findProgramDay(weekday).splitName = val; }
+function addProgramExercise(weekday){
+  findProgramDay(weekday).exercises.push({name:'', muscleGroup:'', targetSets:3, targetReps:'8-12', targetWeight:'', restSec:60, notes:''});
+  rerenderProgramDay(weekday);
+}
+function removeProgramExercise(weekday, i){
+  findProgramDay(weekday).exercises.splice(i,1);
+  rerenderProgramDay(weekday);
+}
+function updateProgramExercise(weekday, i, field, val){
+  findProgramDay(weekday).exercises[i][field] = val;
+}
+async function saveProgramBuilder(){
+  if(!draftProgram.name.trim()){ showToast("Name your program"); return; }
+  const days = draftProgram.days.filter(d=>d.active).map(d=>({weekday:d.weekday, splitName:d.splitName||'Workout', exercises:d.exercises.filter(e=>e.name)}));
+  if(days.length===0){ showToast("Turn on at least one training day"); return; }
+  try{
+    const res = draftProgram.id
+      ? await apiSend('/programs/'+draftProgram.id, 'PUT', {name:draftProgram.name, days})
+      : await apiSend('/programs', 'POST', {name:draftProgram.name, days});
+    state.programs = res.programs;
+    draftProgram = null;
+    closeModal();
+    switchTab('train');
+    showToast("Program saved","success");
+  }catch(e){ showToast("Couldn't save — server error","error"); }
+}
+
+/* ============================================================
+   WEEKLY CHECKLIST — pure read-derived from programs + workouts,
+   computed server-side (workoutProgramService.computeWeeklyChecklist).
+============================================================ */
+async function loadChecklistCard(){
+  const el = document.getElementById('checklistCard');
+  if(!el) return;
+  try{
+    const checklist = await apiGet('/programs/checklist?date='+todayStr());
+    el.innerHTML = renderChecklistCardContent(checklist);
+  }catch(e){
+    el.innerHTML = `<div class="card-head"><h3>This Week</h3></div><div class="muted small">Couldn't load — is the server running?</div>`;
+  }
+}
+function renderChecklistCardContent(checklist){
+  if(checklist.completionPct === null){
+    return `<div class="card-head"><h3>This Week</h3></div><div class="muted small">Build a program to see your weekly checklist here.</div>`;
+  }
+  return `
+    <div class="card-head"><h3>This Week — ${escapeHtml(checklist.programName)}</h3><span class="mono small" style="color:var(--acid-core);">${checklist.completionPct}%</span></div>
+    <div class="row" style="flex-wrap:wrap;">
+      ${checklist.days.map(d=>{
+        const isToday = d.date === todayStr();
+        const st = d.due ? (d.completed ? 'done' : 'due') : 'rest';
+        const color = st==='done' ? 'var(--acid)' : st==='due' ? 'var(--warn)' : 'var(--ink-3)';
+        const glyph = st==='done' ? '✓' : st==='due' ? '●' : '–';
+        return `<div style="flex:1;min-width:38px;text-align:center;">
+          <div class="small" style="${isToday?'color:var(--acid-core);font-weight:700;':'color:var(--ink-2);'}">${WEEKDAY_LABELS[d.weekday].slice(0,3)}</div>
+          <div class="mono" style="color:${color};margin-top:4px;font-size:15px;">${glyph}</div>
+          ${d.due?`<div style="font-size:9px;color:var(--ink-3);margin-top:2px;">${escapeHtml(d.due.splitName)}</div>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+/* ============================================================
+   EXECUTION MODE — the live "Start Workout" session. Server owns
+   the truth (`activeSession` kv key); the client mirrors it in
+   state.activeSession after every call and ticks the elapsed-time
+   display locally from `startedAt` so it stays correct even after
+   the tab or laptop was asleep.
+============================================================ */
+function formatDuration(totalSec){
+  const h = Math.floor(totalSec/3600), m = Math.floor((totalSec%3600)/60), s = totalSec%60;
+  const pad = n => String(n).padStart(2,'0');
+  return h>0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+function sessionElapsedSeconds(){
+  if(!state.activeSession) return 0;
+  return Math.max(0, Math.floor((Date.now() - new Date(state.activeSession.startedAt).getTime())/1000));
+}
+function stopSessionTicker(){
+  if(sessionTicker){ clearInterval(sessionTicker); sessionTicker = null; }
+}
+const SESSION_LENGTH_NUDGE_SEC = 60*60; // a typical session length — one-time, not a hard limit
+let sessionNudgeShown = false;
+function startSessionTicker(){
+  stopSessionTicker();
+  sessionTicker = setInterval(()=>{
+    if(!state.activeSession){ stopSessionTicker(); return; }
+    const secs = sessionElapsedSeconds();
+    const text = formatDuration(secs);
+    document.querySelectorAll('.session-elapsed').forEach(el => el.textContent = text);
+    if(secs >= SESSION_LENGTH_NUDGE_SEC && !sessionNudgeShown){
+      sessionNudgeShown = true;
+      showToast("You've been at it an hour — consider wrapping up soon","success");
+    }
+  }, 1000);
+}
+// The generic "Start Workout" button (Train tab's Program card, shown any
+// time a program exists, not just on a day it's actually scheduled) can't
+// call startWorkoutFlow() bare — that resolves TODAY's due day server-side,
+// which is null on any day the program doesn't schedule something, and
+// silently starts an empty, nameless session (the exact bug reported: no
+// workout name shows because there ARE no exercises). Always let the user
+// pick which day's workout to run instead.
+function openWorkoutDayPicker(){
+  const program = getActiveProgram();
+  if(!program || program.days.length===0){ showToast("Add a training day to your program first"); return; }
+  const html = `
+    <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal-sheet" role="dialog" aria-modal="true">
+        <div class="modal-head"><h2>Choose a Workout</h2><button class="icon-btn" onclick="closeModal()" aria-label="Close">${xIcon()}</button></div>
+        ${[...program.days].sort((a,b)=>a.weekday-b.weekday).map(d=>`
+          <button class="btn btn-ghost btn-block" style="margin-bottom:8px;justify-content:space-between;" onclick="closeModal(); startWorkoutFlow('${program.id}','${d.id}')">
+            <span>${escapeHtml(d.splitName)}</span>
+            <span class="small muted">${WEEKDAY_LABELS[d.weekday].slice(0,3)} · ${d.exercises.length} exercise${d.exercises.length===1?'':'s'}</span>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  document.getElementById('modalRoot').innerHTML = html;
+}
+async function startWorkoutFlow(programId, dayId){
+  try{
+    const res = await apiSend('/session/start', 'POST', {programId, dayId});
+    state.activeSession = res.session;
+    sessionNudgeShown = false;
+    startSessionTicker();
+    openExecutionMode();
+  }catch(e){ showToast("Couldn't start — server error","error"); }
+}
+function openExecutionMode(){
+  if(!state.activeSession){ showToast("No active session"); return; }
+  renderExecutionModal();
+  startSessionTicker();
+}
+// Checklist-style execution: every exercise in the day's plan is listed;
+// only the active one is expanded with the set-logging UI, exercises before
+// it show collapsed with a done/skipped mark, exercises after it show
+// collapsed as upcoming. "Complete & Next" advances and expands the next
+// one — the first exercise of the plan is what's expanded when a session
+// starts, since exerciseIdx begins at 0.
+function renderExecutionModal(){
+  const s = state.activeSession;
+  const names = allExerciseNames();
+  const isLastExercise = s.exercises.length>0 && s.exerciseIdx === s.exercises.length-1;
+  const html = `
+    <div class="modal-overlay">
+      <div class="modal-sheet" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <h2>${escapeHtml(s.splitName||'Workout')}</h2>
+          <button class="icon-btn" onclick="closeModal()" aria-label="Close">${xIcon()}</button>
+        </div>
+        <div class="row" style="align-items:baseline;margin-bottom:14px;">
+          <div class="mono session-elapsed" style="font-size:28px;color:var(--acid);">${formatDuration(sessionElapsedSeconds())}</div>
+          <div class="small muted" style="text-align:right;">Exercise ${s.exercises.length ? s.exerciseIdx+1 : 0}/${s.exercises.length}</div>
+        </div>
+        ${isLastExercise ? `<div class="tag-pill tag-fst" style="display:block;text-align:center;margin-bottom:10px;padding:8px;">Last exercise — wrap it up when ready</div>` : ''}
+        <datalist id="exNamesProgram">${names.map(n=>`<option value="${escapeHtml(n)}">`).join('')}</datalist>
+        ${s.exercises.length===0 ? `<div class="muted small" style="margin-bottom:12px;">No exercises yet — add one below.</div>` :
+          s.exercises.map((ex,i)=>renderExecChecklistRow(ex,i,s.exerciseIdx)).join('')}
+        <div class="row">
+          <input type="text" id="execNewExName" list="exNamesProgram" placeholder="Add another exercise…">
+          <button class="icon-btn" onclick="addExecExercise()" aria-label="Add exercise" style="flex:0 0 auto;">${plusIcon()}</button>
+        </div>
+        <div class="divider"></div>
+        <button class="btn btn-primary btn-block" onclick="finishWorkoutSession()">FINISH WORKOUT</button>
+        <button class="btn btn-ghost btn-block" onclick="discardWorkoutSession()">Discard session</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modalRoot').innerHTML = html;
+  document.getElementById('execReps')?.focus();
+}
+function renderExecChecklistRow(ex, i, activeIdx){
+  if(i === activeIdx) return renderExecActiveExercise(ex, i);
+  const past = i < activeIdx;
+  const done = past && ex.sets.length>0;
+  const skipped = past && ex.sets.length===0;
+  const glyph = done ? '✓' : skipped ? '–' : String(i+1);
+  const color = done ? 'var(--acid)' : skipped ? 'var(--ink-3)' : 'var(--ink-2)';
+  return `
+    <button class="hist-item hist-top" style="width:100%;margin-bottom:8px;opacity:${past?0.7:1};" onclick="execGoTo(${i})">
+      <div class="row" style="align-items:center;gap:10px;">
+        <div class="mono" style="color:${color};font-weight:700;width:20px;text-align:center;">${glyph}</div>
+        <div>
+          <div style="font-weight:600;">${escapeHtml(ex.name)}</div>
+          <div class="small muted">${ex.targetSets?`${ex.targetSets} × ${escapeHtml(String(ex.targetReps||''))}`:''}${done?` · ${ex.sets.length} logged`:''}</div>
+        </div>
+      </div>
+    </button>
+  `;
+}
+function renderExecActiveExercise(ex, i){
+  return `
+    <div class="card" style="margin-bottom:12px;border-color:var(--line-acid);">
+      <div class="hist-title">${escapeHtml(ex.name)}</div>
+      ${ex.targetSets? `<div class="small muted">Target: ${ex.targetSets} × ${escapeHtml(String(ex.targetReps||''))}${ex.targetWeight?` @ ${ex.targetWeight}${state.settings.unit}`:''}</div>`:''}
+      <div class="divider"></div>
+      ${ex.sets.map((set,j)=>`
+        <div class="set-row">
+          <div class="idx mono">${j+1}</div>
+          <div class="mono">${set.weight}${state.settings.unit}</div>
+          <div class="mono">${set.reps} reps</div>
+          <button class="icon-btn" onclick="removeExecSet(${i},${j})" aria-label="Remove set">${xIcon()}</button>
+        </div>
+      `).join('')}
+      <div class="set-row">
+        <div class="idx mono">${ex.sets.length+1}</div>
+        <input type="number" inputmode="decimal" id="execWeight" placeholder="Weight (${state.settings.unit})" value="${ex.targetWeight||''}">
+        <input type="number" inputmode="numeric" id="execReps" placeholder="Reps" onkeydown="if(event.key==='Enter'){ event.preventDefault(); logExecSet(); }">
+        <button class="icon-btn" onclick="logExecSet()" aria-label="Log set">${checkIcon()}</button>
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="completeExecExercise(${i})">
+        ${i>=state.activeSession.exercises.length-1 ? '✓ Complete & Finish' : '✓ Complete & Next'}
+      </button>
+    </div>
+  `;
+}
+function completeExecExercise(i){
+  if(i >= state.activeSession.exercises.length-1){ finishWorkoutSession(); return; }
+  execGoTo(i+1);
+}
+async function logExecSet(){
+  const weight = document.getElementById('execWeight').value;
+  const reps = document.getElementById('execReps').value;
+  if(reps===''){ showToast("Enter reps"); return; }
+  try{
+    const res = await apiSend('/session/set', 'POST', {exerciseIdx: state.activeSession.exerciseIdx, weight, reps});
+    state.activeSession = res.session;
+    renderExecutionModal();
+  }catch(e){ showToast("Couldn't log set — server error","error"); }
+}
+async function removeExecSet(exerciseIdx, setIdx){
+  try{
+    const res = await apiSend('/session/set', 'DELETE', {exerciseIdx, setIdx});
+    state.activeSession = res.session;
+    renderExecutionModal();
+  }catch(e){ showToast("Couldn't remove set","error"); }
+}
+async function execGoTo(idx){
+  if(idx<0 || idx>=state.activeSession.exercises.length) return;
+  try{
+    const res = await apiSend('/session/exercise', 'POST', {idx});
+    state.activeSession = res.session;
+    renderExecutionModal();
+  }catch(e){ showToast("Couldn't switch exercise","error"); }
+}
+async function addExecExercise(){
+  const input = document.getElementById('execNewExName');
+  const name = input.value.trim();
+  if(!name) return;
+  try{
+    const res = await apiSend('/session/add-exercise', 'POST', {name});
+    state.activeSession = res.session;
+    await execGoTo(state.activeSession.exercises.length-1);
+  }catch(e){ showToast("Couldn't add exercise","error"); }
+}
+function finishWorkoutSession(){
+  confirmSheet("Finish and save this workout to your history?", async ()=>{
+    try{
+      const res = await apiSend('/session/finish', 'POST');
+      state.workouts.push(res.workout);
+      state.activeSession = null;
+      stopSessionTicker();
+      closeModal();
+      switchTab('train');
+      showToast("Workout saved 💪","success");
+    }catch(e){ showToast("Couldn't finish — server error","error"); }
+  }, {yes:'Finish', danger:false});
+}
+function discardWorkoutSession(){
+  confirmSheet("Discard this session? Nothing will be saved.", async ()=>{
+    try{
+      await apiSend('/session', 'DELETE');
+      state.activeSession = null;
+      stopSessionTicker();
+      closeModal();
+      renderApp();
+      showToast("Session discarded","success");
+    }catch(e){ showToast("Couldn't discard","error"); }
+  });
+}
+function checkIcon(){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>`; }
+function plusIcon(){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>`; }
+
+/* ============================================================
+   FUEL TAB — date-aware, not today-only
+============================================================ */
+function renderFuel(){
+  const date = state.fuelDate || todayStr();
+  const day = state.dietLog.find(d=>d.date===date);
+  const totals = dietTotals(day);
+  const t = state.settings.targets;
+  const overCal = totals.calories > t.calories;
+  return `
+    <div class="section-title">Fuel</div>
+    <div class="fuel-narrow" style="display:contents;">
+
+    <div class="card">
+      <div class="card-head"><h3>Targets — ${PHASE_PRESETS[state.settings.phase].label}</h3></div>
+      <div class="grid2">
+        ${Object.entries(PHASE_PRESETS).map(([k,v])=>`
+          <button class="btn btn-ghost btn-sm" onclick="applyPreset('${k}')">${v.label} preset</button>
+        `).join('')}
+        <button class="btn btn-ghost btn-sm" onclick="applyStatsTargets()">Calculate from my stats</button>
+      </div>
+      <div class="divider"></div>
+      <div class="grid2 desktop-4">
+        <div class="field"><label>Calories</label><input type="number" value="${t.calories}" onchange="updateTarget('calories', this.value)"></div>
+        <div class="field"><label>Protein (g)</label><input type="number" value="${t.protein}" onchange="updateTarget('protein', this.value)"></div>
+        <div class="field"><label>Carbs (g)</label><input type="number" value="${t.carbs}" onchange="updateTarget('carbs', this.value)"></div>
+        <div class="field"><label>Fat (g)</label><input type="number" value="${t.fat}" onchange="updateTarget('fat', this.value)"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>${date===todayStr() ? 'Today' : fmtDate(date)}</h3>
+        <input type="date" value="${date}" onchange="setFuelDate(this.value)" style="width:auto;padding:6px 8px;font-size:12px;">
+      </div>
+      <div id="fuelToday">${renderFuelToday(totals, t, overCal)}</div>
+    </div>
+
+    ${renderDietPlanCard()}
+
+    <div class="card">
+      <div class="card-head"><h3 class="accent">⚡ Quick Log (AI)</h3></div>
+      <div class="field">
+        <textarea id="aiQuickDesc" placeholder="e.g. 4 rotis + dal 250g, or 3 eggs + oats 100g"
+          onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); quickLogAI(); }"></textarea>
+      </div>
+      <div class="row">
+        <select id="aiQuickSlot">
+          ${MEAL_SLOTS.map(m=>`<option value="${m.key}" ${defaultSlotForNow()===m.key?'selected':''}>${m.label}</option>`).join('')}
+        </select>
+        <button class="btn btn-primary" id="aiQuickBtn" onclick="quickLogAI()" style="flex:0 0 auto;">Log it</button>
+      </div>
+      <div class="small muted" style="margin-top:8px;">Describes what you ate, splits it into items, and logs them immediately — no review step. This is the only way to log food — if it fails (no key, no internet), food logging is unavailable until it's back.</div>
+    </div>
+
+    ${MEAL_SLOTS.map(m => renderMealSlot(day, date, m)).join('')}
+
+    </div>
+    <div class="divider"></div>
+    <div class="card-head"><h3>History</h3></div>
+    ${renderDietHistory()}
+  `;
+}
+function renderFuelToday(totals, t, overCal){
+  return `
+    <div class="mono small ${overCal?'warn-text':'muted'}" style="text-align:right;margin-bottom:8px;">
+      ${overCal ? Math.round(totals.calories-t.calories)+' kcal over' : Math.round(t.calories - totals.calories)+' kcal left'}
+    </div>
+    ${renderMacroBar('Calories', totals.calories, t.calories, ' kcal')}
+    ${renderMacroBar('Protein', totals.protein, t.protein)}
+    ${renderMacroBar('Carbs', totals.carbs, t.carbs)}
+    ${renderMacroBar('Fat', totals.fat, t.fat)}
+    <div class="datum" style="margin-top:6px;"><span class="v">${Math.round(totals.fiber)}g</span><span class="l">Fiber</span></div>
+  `;
+}
+function setFuelDate(val){
+  state.fuelDate = val;
+  renderApp();
+}
+function renderMealSlot(day, date, m){
+  const items = day ? (day.meals[m.key]||[]) : [];
+  if(items.length===0) return '';
+  return `
+    <div class="card">
+      <div class="card-head"><h3>${m.label}</h3></div>
+      ${items.map((f,idx)=>`
+        <div class="row" style="align-items:center;margin-bottom:6px;">
+          <div style="flex:3;">
+            <div style="font-weight:600;font-size:13.5px;">${escapeHtml(f.name)}</div>
+            <div class="small muted mono">${f.qty}× ${escapeHtml(f.serving||'')} · ${f.calories} kcal</div>
+          </div>
+          <div style="flex:0 0 auto;"><button class="icon-btn" onclick="deleteFoodEntry('${date}','${m.key}', ${idx})" aria-label="Remove">${xIcon()}</button></div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+async function deleteFoodEntry(date, slotKey, idx){
+  try{
+    await apiSend('/meals', 'DELETE', { date, slot: slotKey, idx });
+    const day = state.dietLog.find(d=>d.date===date);
+    if(day) day.meals[slotKey].splice(idx,1);
+    renderApp();
+  }catch(e){ showToast("Couldn't remove — server error","error"); }
+}
+async function applyPreset(key){
+  state.settings.phase = key;
+  state.settings.targets = freshTargets(key);
+  state.settings.targetsEdited = false;
+  await saveKey('settings', state.settings);
+  renderApp();
+}
+async function applyStatsTargets(){
+  if(!state.profile || !state.profile.heightCm || !state.profile.age || !state.profile.sex){
+    showToast("Fill in your profile first — tap the person icon, top right","error");
+    return;
+  }
+  try{
+    const {targets} = await apiSend('/profile/targets', 'POST');
+    state.settings.targets = targets;
+    state.settings.targetsEdited = true;
+    await saveKey('settings', state.settings);
+    renderApp();
+    showToast("Targets calculated from your stats","success");
+  }catch(e){
+    showToast(e.message || "Couldn't calculate — log a bodyweight entry first","error");
+  }
+}
+async function updateTarget(field, val){
+  state.settings.targets[field] = Number(val)||0;
+  state.settings.targetsEdited = true;
+  await saveKey('settings', state.settings);
+  const date = state.fuelDate || todayStr();
+  const day = state.dietLog.find(d=>d.date===date);
+  const totals = dietTotals(day);
+  const t = state.settings.targets;
+  const el = document.getElementById('fuelToday');
+  if(el) el.innerHTML = renderFuelToday(totals, t, totals.calories>t.calories);
+}
+function renderDietHistory(){
+  const sorted = [...state.dietLog].sort((a,b)=> a.date<b.date?1:-1).slice(0,14);
+  if(sorted.length===0) return `<div class="muted small" style="padding:8px 0 20px;">No days logged yet.</div>`;
+  return sorted.map(d=>{
+    const t = dietTotals(d);
+    return `<button class="hist-item hist-top" style="width:100%;margin-bottom:10px;display:flex;" onclick="setFuelDate('${d.date}'); switchTab('fuel');">
+      <div>
+        <div class="hist-date mono">${fmtDate(d.date)}</div>
+        <div class="hist-body" style="margin-top:4px;">P ${Math.round(t.protein)}g · C ${Math.round(t.carbs)}g · F ${Math.round(t.fat)}g</div>
+      </div>
+      <div class="mono" style="color:var(--acid);">${Math.round(t.calories)} kcal</div>
+    </button>`;
+  }).join('');
+}
+
+// Quick Log (AI) is the only food-logging path now (manual entry removed
+// per product decision) — this helper still selects a sensible default
+// meal slot for it based on time of day.
+function defaultSlotForNow(){
+  const h = new Date().getHours();
+  if(h < 11) return 'breakfast';
+  if(h < 16) return 'lunch';
+  if(h < 20) return 'dinner';
+  return 'snacks';
+}
+
+/* ============================================================
+   MEASURE TAB
+============================================================ */
+function renderMeasure(){
+  const sorted = [...state.measurements].sort((a,b)=> a.date<b.date?1:-1);
+  return `
+    <div class="section-title">Measure</div>
+    <div class="measure-narrow" style="display:contents;">
+    <button class="btn btn-primary btn-block" onclick="openMeasurementForm()">+ New Entry</button>
+    <div class="card">
+      <div class="card-head"><h3>Bodyweight Trend</h3></div>
+      <div class="chartwrap" id="ch-weight"><div class="muted small">Log at least 2 weigh-ins to see a trend line.</div></div>
+    </div>
+    ${sorted.length===0? emptyState('No entries yet','Log your weight and measurements to see trends.','+ New Entry','openMeasurementForm()') :
+      sorted.map(m => renderMeasurementItem(m)).join('')}
+    </div>
+  `;
+}
+function renderMeasurementItem(m){
+  const fields = [['chest','Chest'],['waist','Waist'],['arms','Arms'],['thighs','Thighs'],['calves','Calves'],['shoulders','Shoulders'],['neck','Neck']];
+  const present = fields.filter(([k])=>m[k]);
+  return `<div class="hist-item">
+    <div class="hist-top" style="cursor:default;">
+      <div>
+        <div class="hist-date mono">${fmtDate(m.date)}</div>
+        <div class="hist-title">${m.weight? m.weight+' '+state.settings.unit : 'Measurements'}</div>
+      </div>
+      <button class="icon-btn" onclick="deleteMeasurement('${m.id}')" aria-label="Delete">${xIcon()}</button>
+    </div>
+    ${present.length? `<div class="hist-body">${present.map(([k,l])=>`<span class="datum"><span class="v">${m[k]}cm</span><span class="l">${l}</span></span>`).join('')}</div>` : ''}
+  </div>`;
+}
+function deleteMeasurement(id){
+  confirmSheet("Delete this entry?", async ()=>{
+    state.measurements = state.measurements.filter(m=>m.id!==id);
+    await saveKey('measurements', state.measurements);
+    renderApp();
+    showToast("Deleted","success");
+  });
+}
+function openMeasurementForm(){
+  draftMeasurement = {date: todayStr(), weight:'', neck:'', shoulders:'', chest:'', waist:'', arms:'', thighs:'', calves:''};
+  renderMeasurementModal();
+}
+function renderMeasurementModal(){
+  const d = draftMeasurement;
+  const fields = [['weight','Weight ('+state.settings.unit+')'],['neck','Neck (cm)'],['shoulders','Shoulders (cm)'],['chest','Chest (cm)'],['waist','Waist (cm)'],['arms','Arms (cm)'],['thighs','Thighs (cm)'],['calves','Calves (cm)']];
+  const html = `
+    <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal-sheet" role="dialog" aria-modal="true">
+        <div class="modal-head"><h2>Log Measurements</h2><button class="icon-btn" onclick="closeModal()" aria-label="Close">${xIcon()}</button></div>
+        <div class="field"><label>Date</label><input type="date" value="${d.date}" onchange="draftMeasurement.date=this.value"></div>
+        <div class="grid2">
+          ${fields.map(([k,l])=>`<div class="field"><label>${l}</label><input type="number" step="0.1" value="${d[k]}" onchange="draftMeasurement['${k}']=this.value"></div>`).join('')}
+        </div>
+        <button class="btn btn-primary btn-block" onclick="saveMeasurement()">Save Entry</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modalRoot').innerHTML = html;
+}
+async function saveMeasurement(){
+  const d = draftMeasurement;
+  if(!d.weight && !d.chest && !d.waist && !d.arms){ showToast("Add at least one value"); return; }
+  const entry = {id: uid(), ...d};
+  Object.keys(entry).forEach(k=>{ if(k!=='id' && k!=='date' && entry[k]!=='') entry[k]=Number(entry[k]); });
+  state.measurements.push(entry);
+  const ok = await saveKey('measurements', state.measurements);
+  closeModal();
+  switchTab('measure');
+  if(ok) showToast("Measurement saved","success");
+}
+
+/* ============================================================
+   PHOTOS TAB — the server owns the blobs now (SQLite `photos` table);
+   the browser just points <img> tags at GET /api/photos/:id/:variant.
+   No object-URL cache, no IndexedDB — one less moving part.
+============================================================ */
+function hydratePhotoImages(){
+  document.querySelectorAll('img[data-photo-id]').forEach(img=>{
+    const id = img.dataset.photoId, variant = img.dataset.variant || 'display';
+    img.src = `${API}/photos/${id}/${variant}`;
+  });
+}
+
+function renderPhotos(){
+  const sorted = [...state.photos].sort((a,b)=> a.date<b.date?1:-1);
+  return `
+    <div class="section-title">Photos</div>
+    <button class="btn btn-primary btn-block" onclick="openPhotoForm()">+ Add Photo</button>
+    ${sorted.length>=2 ? renderCompareTool(sorted) : ''}
+    ${sorted.length===0 ? emptyState('No photos yet','Add your first progress shot.','+ Add Photo','openPhotoForm()') : `
+      <div class="photo-grid">
+        ${sorted.map(p=>`
+          <button class="photo-thumb" onclick="openLightbox('${p.id}')" aria-label="Open photo from ${fmtShort(p.date)}">
+            <img data-photo-id="${p.id}" data-variant="thumb" loading="lazy" decoding="async" alt="progress photo, ${escapeHtml(p.pose)}, ${fmtShort(p.date)}">
+            <div class="pose-pill">${escapeHtml(p.pose)}</div>
+            <div class="cap mono">${fmtShort(p.date)}</div>
+          </button>
+        `).join('')}
+      </div>
+    `}
+  `;
+}
+function renderCompareTool(sorted){
+  if(!compareIds[0]) compareIds[0] = sorted[sorted.length-1].id;
+  if(!compareIds[1]) compareIds[1] = sorted[0].id;
+  const p0 = state.photos.find(p=>p.id===compareIds[0]);
+  const p1 = state.photos.find(p=>p.id===compareIds[1]);
+  const days = (p0&&p1) ? Math.round((new Date(p1.date)-new Date(p0.date))/86400000) : null;
+  return `
+    <div class="card">
+      <div class="card-head"><h3>Compare</h3>${days!==null?`<span class="mono small accent" style="color:var(--acid);">${days>=0?'+':''}${days}d</span>`:''}</div>
+      <div class="compare-select">
+        <select onchange="compareIds[0]=this.value; renderApp();">
+          ${sorted.map(p=>`<option value="${p.id}" ${p.id===compareIds[0]?'selected':''}>${fmtShort(p.date)} · ${p.pose}</option>`).join('')}
+        </select>
+        <select onchange="compareIds[1]=this.value; renderApp();">
+          ${sorted.map(p=>`<option value="${p.id}" ${p.id===compareIds[1]?'selected':''}>${fmtShort(p.date)} · ${p.pose}</option>`).join('')}
+        </select>
+      </div>
+      <div class="compare-view" id="compareView"
+        onpointerdown="compareFadeStart(event)" onpointermove="compareFadeMove(event)" onpointerup="compareFadeEnd(event)" onpointerleave="compareFadeEnd(event)">
+        ${p0?`<img data-photo-id="${p0.id}" data-variant="display" alt="before">`:''}
+        ${p1?`<img data-photo-id="${p1.id}" data-variant="display" class="top" style="opacity:${compareFade/100}" alt="after">`:''}
+      </div>
+      <div class="compare-hint">Hold + drag to fade between them</div>
+    </div>
+  `;
+}
+let compareDragging = false;
+function compareFadeStart(e){ compareDragging = true; compareFadeMove(e); }
+function compareFadeMove(e){
+  if(!compareDragging) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const pct = Math.min(100, Math.max(0, ((e.clientX-rect.left)/rect.width)*100));
+  compareFade = pct;
+  const top = e.currentTarget.querySelector('img.top');
+  if(top) top.style.opacity = pct/100;
+}
+function compareFadeEnd(){ compareDragging = false; }
+function openLightbox(id){
+  const p = state.photos.find(p=>p.id===id);
+  if(!p) return;
+  document.getElementById('modalRoot').innerHTML = `
+    <div class="lightbox" onclick="closeLightbox()" role="dialog" aria-modal="true">
+      <img data-photo-id="${p.id}" data-variant="display" alt="progress photo">
+      <div class="mono small" style="color:var(--ink-2);margin-top:12px;">${fmtDate(p.date)} · ${escapeHtml(p.pose)}${p.note? ' · '+escapeHtml(p.note):''}</div>
+      <button class="btn btn-danger btn-sm" style="margin-top:14px;" onclick="event.stopPropagation(); deletePhoto('${p.id}')">Delete Photo</button>
+    </div>
+  `;
+  hydratePhotoImages();
+}
+function closeLightbox(){ document.getElementById('modalRoot').innerHTML=""; }
+function deletePhoto(id){
+  confirmSheet("Delete this photo?", async ()=>{
+    try{
+      await apiSend('/photos/'+id, 'DELETE');
+      state.photos = state.photos.filter(p=>p.id!==id);
+      closeLightbox();
+      renderApp();
+      showToast("Photo deleted","success");
+    }catch(e){ showToast("Couldn't delete — server error","error"); }
+  });
+}
+function openPhotoForm(){
+  draftPhoto = {date: todayStr(), pose:'front', note:'', blob:null, thumb:null, w:0, h:0};
+  renderPhotoModal();
+}
+function renderPhotoModal(){
+  const d = draftPhoto;
+  const html = `
+    <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal-sheet" role="dialog" aria-modal="true">
+        <div class="modal-head"><h2>Add Progress Photo</h2><button class="icon-btn" onclick="closeModal()" aria-label="Close">${xIcon()}</button></div>
+        <div class="row">
+          <div class="field"><label>Date</label><input type="date" value="${d.date}" onchange="draftPhoto.date=this.value"></div>
+          <div class="field"><label>Pose</label>
+            <select onchange="draftPhoto.pose=this.value">
+              <option value="front" ${d.pose==='front'?'selected':''}>Front</option>
+              <option value="back" ${d.pose==='back'?'selected':''}>Back</option>
+              <option value="side" ${d.pose==='side'?'selected':''}>Side</option>
+              <option value="double-bi" ${d.pose==='double-bi'?'selected':''}>Double Bi</option>
+              <option value="most-muscular" ${d.pose==='most-muscular'?'selected':''}>Most Muscular</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>Note (optional)</label><input type="text" placeholder="e.g. Week 6 prep, 82kg" value="${escapeHtml(d.note)}" onchange="draftPhoto.note=this.value"></div>
+        <div class="field">
+          <label>Photo</label>
+          <button type="button" id="uploadArea" class="upload-drop" onclick="document.getElementById('fileInput').click()"
+            ondragover="event.preventDefault(); this.classList.add('dragover');"
+            ondragleave="this.classList.remove('dragover');"
+            ondrop="event.preventDefault(); this.classList.remove('dragover'); handlePhotoFile(event.dataTransfer.files[0]);">
+            Tap to choose, or drag a photo here
+          </button>
+          <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handlePhotoFile(this.files[0])">
+        </div>
+        <div id="previewWrap"></div>
+        <button class="btn btn-primary btn-block" onclick="savePhoto()">Save Photo</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modalRoot').innerHTML = html;
+}
+function downscalePhotoBlob(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const mk = (maxW, q)=> new Promise(res=>{
+          const scale = Math.min(1, maxW/img.width);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width*scale);
+          canvas.height = Math.round(img.height*scale);
+          canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+          canvas.toBlob(b=>res(b), 'image/jpeg', q);
+        });
+        Promise.all([mk(1440,0.82), mk(320,0.72)]).then(([display,thumb])=>{
+          resolve({display, thumb, w:img.width, h:img.height});
+        });
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+async function handlePhotoFile(file){
+  if(!file) return;
+  const {display, thumb, w, h} = await downscalePhotoBlob(file);
+  draftPhoto.blob = display; draftPhoto.thumb = thumb; draftPhoto.w = w; draftPhoto.h = h;
+  const url = URL.createObjectURL(thumb);
+  document.getElementById('previewWrap').innerHTML = `<img src="${url}" style="width:120px;border-radius:10px;margin:8px 0;display:block;">`;
+  document.getElementById('uploadArea').textContent = 'Photo selected — tap to change';
+}
+async function savePhoto(){
+  if(!draftPhoto.blob){ showToast("Choose a photo first"); return; }
+  const form = new FormData();
+  form.append('date', draftPhoto.date);
+  form.append('pose', draftPhoto.pose);
+  form.append('note', draftPhoto.note || '');
+  form.append('w', draftPhoto.w);
+  form.append('h', draftPhoto.h);
+  form.append('type', draftPhoto.blob.type || 'image/jpeg');
+  form.append('display', draftPhoto.blob, 'display.jpg');
+  form.append('thumb', draftPhoto.thumb, 'thumb.jpg');
+  try{
+    const meta = await (await fetch(API+'/photos', {method:'POST', body:form})).json();
+    state.photos.push(meta);
+    compareIds = [null,null];
+    closeModal();
+    switchTab('photos');
+    showToast("Photo saved","success");
+  }catch(e){
+    showToast("Couldn't save photo — server error","error");
+  }
+}
+
+/* ============================================================
+   SETTINGS — backup export/import, units, AI key, storage info
+============================================================ */
+function openSettings(){
+  renderSettingsModal();
+}
+
+async function renderSettingsModal(){
+  const html = `
+    <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal-sheet" role="dialog" aria-modal="true">
+        <div class="modal-head"><h2>Settings</h2><button class="icon-btn" onclick="closeModal()" aria-label="Close">${xIcon()}</button></div>
+
+        <div class="settings-section">
+          <h4>Backup</h4>
+          <button class="btn btn-primary btn-block" onclick="exportBackup()">Export Backup</button>
+          <div style="height:8px;"></div>
+          <button class="btn btn-ghost btn-block" onclick="document.getElementById('importFile').click()">Restore from Backup</button>
+          <input type="file" id="importFile" accept="application/json,.json" style="display:none;" onchange="importBackup(this.files[0])">
+        </div>
+
+        <div class="settings-section">
+          <h4>Units</h4>
+          <div class="grid2">
+            <button class="btn ${state.settings.unit==='kg'?'btn-primary':'btn-ghost'}" onclick="setUnit('kg')">kg</button>
+            <button class="btn ${state.settings.unit==='lb'?'btn-primary':'btn-ghost'}" onclick="setUnit('lb')">lb</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h4>AI Food Estimator</h4>
+          <div class="kv-row"><span class="muted">Key location</span><span class="mono small">server/.env</span></div>
+          <div class="field" style="margin-top:10px;"><label>Model</label><input type="text" id="oaModel" value="${escapeHtml(state.settings.aiModel||OPENAI_MODEL_DEFAULT)}"></div>
+          <div class="row">
+            <button class="btn btn-ghost btn-block" onclick="saveAiSettings()">Save model</button>
+            <button class="btn btn-ghost btn-block" onclick="testOpenAIKey()">Test connection</button>
+          </div>
+          <div class="small muted" style="margin-top:8px;">The OpenAI key now lives in <span class="mono">server/.env</span> on this machine — it never reaches the browser. Copy <span class="mono">server/.env.example</span> to <span class="mono">server/.env</span> and paste your key there once.</div>
+        </div>
+
+        <div class="settings-section">
+          <h4>Version</h4>
+          <div class="kv-row"><span class="muted">Build</span><span class="mono">${SW_VERSION}</span></div>
+          <button class="btn btn-ghost btn-block" onclick="checkForUpdate()">Check for update</button>
+        </div>
+
+        <div class="settings-section">
+          <h4 style="color:var(--danger-ink);">Danger Zone</h4>
+          <button class="btn btn-danger btn-block" onclick="resetAllData()">Reset All Data</button>
+          <div class="small muted" style="margin-top:8px;">Permanently deletes everything — workouts, meals, measurements, photos, steps, cardio, your program, and settings. Export a backup first if you're unsure.</div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('modalRoot').innerHTML = html;
+}
+function resetAllData(){
+  confirmSheet("This permanently deletes ALL workouts, meals, measurements, photos, steps, cardio logs, your workout program, and your settings — back to a first-launch empty app. This cannot be undone.", async ()=>{
+    try{
+      await apiSend('/backup/reset', 'POST');
+      await loadMeta();
+      await loadAll();
+      compareIds = [null,null];
+      closeModal();
+      switchTab('dashboard');
+      showToast("Everything reset","success");
+    }catch(e){ showToast("Couldn't reset — server error","error"); }
+  }, {yes:'Reset everything', danger:true});
+}
+async function setUnit(u){
+  state.settings.unit = u;
+  await saveKey('settings', state.settings);
+  renderSettingsModal();
+  renderApp();
+}
+function saveAiSettings(){
+  state.settings.aiModel = document.getElementById('oaModel').value.trim() || OPENAI_MODEL_DEFAULT;
+  saveKey('settings', state.settings);
+  showToast("Model saved","success");
+}
+async function testOpenAIKey(){
+  try{
+    const r = await apiGet('/ai/test-key');
+    showToast(r.ok ? "Key is valid" : "Key rejected — check server/.env", r.ok?"success":"error");
+  }catch(e){
+    showToast(e.status===412 ? "No OPENAI_API_KEY set in server/.env" : "No connection to the server","error");
+  }
+}
+async function checkForUpdate(){
+  if('serviceWorker' in navigator){
+    const reg = await navigator.serviceWorker.getRegistration();
+    if(reg){ await reg.update(); showToast("Checked — reload to apply","success"); return; }
+  }
+  showToast("Not running as an installed app");
+}
+
+async function exportBackup(){
+  try{
+    const data = await apiGet('/backup/export');
+    const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
+    const filename = `vishalxfit-backup-${todayStr()}.json`;
+    if(navigator.canShare && navigator.share){
+      const file = new File([blob], filename, {type:'application/json'});
+      if(navigator.canShare({files:[file]})){
+        navigator.share({files:[file], title:'VISHALXFIT backup'}).catch(()=>{ downloadBlob(blob, filename); });
+        return;
+      }
+    }
+    downloadBlob(blob, filename);
+  }catch(e){ showToast("Couldn't export — server error","error"); }
+}
+function downloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
+function importBackup(file){
+  if(!file) return;
+  confirmSheet("This replaces everything currently in VISHALXFIT with the backup file. Export a backup first if you're unsure.", async ()=>{
+    try{
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const result = await apiSend('/backup/restore', 'POST', data);
+      await loadAll();
+      closeModal();
+      switchTab('dashboard');
+      showToast(`Restored ${result.counts.workouts} workouts, ${result.counts.photos} photos`,"success");
+    }catch(e){
+      console.error(e);
+      showToast(e.message || "Couldn't read that backup file","error");
+    }
+  }, {yes:'Restore', danger:true});
+}
+
+/* ============================================================
+   AI FOOD ESTIMATOR — Quick Log card on the Fuel tab. Fully automatic
+   per the locked product decision: one call parses AND logs, no
+   confirm step. All AI integration (the key, the OpenAI call, the
+   food-parser normalization) lives server-side — see server/services/
+   aiService.js + foodParserService.js. This is just the UI trigger.
+============================================================ */
+async function quickLogAI(){
+  const descEl = document.getElementById('aiQuickDesc');
+  const desc = descEl.value.trim();
+  if(!desc){ showToast("Describe what you ate first"); return; }
+  const slot = document.getElementById('aiQuickSlot').value;
+  const btn = document.getElementById('aiQuickBtn');
+  const original = btn.textContent;
+  btn.textContent = "Logging…";
+  btn.disabled = true;
+  try{
+    const result = await apiSend('/ai/estimate', 'POST', { description: desc, date: state.fuelDate || todayStr(), slot });
+    descEl.value = '';
+    const names = result.entries.map(e=>e.name).join(', ');
+    state.dietLog = await loadKey('dietLog', state.dietLog);
+    renderApp();
+    showToast(`Logged: ${names}`, "success");
+  }catch(e){
+    if(e.status === 412) showToast("Add your OpenAI key to server/.env, then restart the server","error");
+    else if(e.status === 401) showToast("Server's OpenAI key was rejected","error");
+    else if(e.status === 429) showToast("Rate limited or out of credit","error");
+    else showToast(e.message || "Couldn't estimate — try rephrasing","error");
+  }finally{
+    btn.textContent = original;
+    btn.disabled = false;
+  }
+}
+
+/* ============================================================
+   SERVICE WORKER + BRAND MARK MOUNT
+============================================================ */
+function mountBrandMark(){
+  // The seven-staves graphic is intentionally NOT part of the in-app wordmark
+  // (text-only, per the logo decision) — it still lives in the boot curtain's
+  // loading animation and in the installed home-screen icon (separate PNG assets).
+  const boot = document.getElementById('bootGauge');
+  if(boot) boot.innerHTML = sevenStavesSvg({filled:7});
+}
+
+/* ============================================================
+   TOPBAR CLOCK — greeting + live date/time. Lives in the static
+   shell (not re-rendered per tab), so it's mounted/ticked directly
+   rather than through renderApp().
+============================================================ */
+function getGreeting(){
+  const h = new Date().getHours();
+  if(h < 5) return 'Good Night';
+  if(h < 12) return 'Good Morning';
+  if(h < 17) return 'Good Afternoon';
+  if(h < 21) return 'Good Evening';
+  return 'Good Night';
+}
+function renderTopbarClock(){
+  const now = new Date();
+  const time = now.toLocaleTimeString(undefined, {hour:'numeric', minute:'2-digit'});
+  const date = now.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'});
+  return `<div class="greeting">${getGreeting()}</div><div class="clock mono">${time} · ${date}</div>`;
+}
+function tickTopbarClock(){
+  const el = document.getElementById('topbarClockbar');
+  if(el) el.innerHTML = renderTopbarClock();
+}
+function startClockTicker(){
+  tickTopbarClock();
+  setInterval(tickTopbarClock, 30000);
+}
+function registerSW(){
+  if(!location.protocol.startsWith('http')) return;
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+(async function init(){
+  mountBrandMark();
+  startClockTicker();
+  const reachable = await loadMeta();
+  if(reachable) await loadAll();
+  renderApp();
+  registerSW();
+  if(reachable) startPolling(); // cross-device sync — see pollForRemoteChanges()
+  const boot = document.getElementById('boot');
+  if(boot){ boot.style.transition='opacity .25s ease'; boot.style.opacity='0'; setTimeout(()=>boot.remove(), 260); }
+  // honor the manifest's home-screen shortcuts (long-press the app icon)
+  const shortcutAction = new URLSearchParams(location.search).get('a');
+  if(shortcutAction === 'workout') openWorkoutForm();
+  if(shortcutAction === 'meal') switchTab('fuel'), setTimeout(()=>document.getElementById('aiQuickDesc')?.focus(),0);
+})();
+</script>
+</body>
+</html>
