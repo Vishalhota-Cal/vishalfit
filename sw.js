@@ -1,6 +1,6 @@
 // Bump this on every edit to index.html/css/assets, or an installed app
 // keeps serving the old version forever (cache-first navigation).
-const CACHE = 'vx-2026-08-18-2';
+const CACHE = 'vx-2026-08-18-3';
 const PRECACHE = [
   './',
   './index.html',

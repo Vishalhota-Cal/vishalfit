@@ -3,6 +3,7 @@ server/node_modules/
 server/.env
 .env
 .vercel
+.DS_Store
 data/*.db
 data/*.db-journal
 data/*.db-shm

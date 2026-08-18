@@ -172,18 +172,6 @@ input,select,textarea{font-family:inherit;}
 }
 .topbar-clockbar .greeting{font-family:'Anton','Arial Narrow',Impact,sans-serif;font-size:15px;color:var(--chalk);letter-spacing:0.01em;}
 .topbar-clockbar .clock{font-size:var(--fs-xs);color:var(--ink-2);white-space:nowrap;}
-.phase-badge{
-  position:relative;overflow:hidden;
-  padding:7px 13px;border-radius:20px;font-size:var(--fs-micro);font-weight:700;
-  letter-spacing:0.09em;text-transform:uppercase;border:1px solid var(--line);
-  background:var(--surface);cursor:pointer;user-select:none;
-  transition:transform .18s var(--ease-pop);
-}
-.phase-badge:active{transform:scale(0.92);}
-.phase-offseason{color:var(--acid);border-color:rgba(204,255,0,0.35);}
-.phase-prep{color:var(--chalk);border-color:var(--line-strong);}
-.phase-peak{color:#FF8A8A;border-color:rgba(255,77,77,0.4);background:var(--danger-soft);}
-
 /* ---------- NAV ---------- */
 .navbar{
   position:fixed;bottom:0;left:0;right:0;z-index:30;
@@ -781,7 +769,6 @@ textarea{resize:vertical;min-height:56px;}
         </div>
       </div>
       <div class="topbar-actions">
-        <div id="phaseBadge" class="phase-badge phase-offseason" onclick="cyclePhase()">Off-Season</div>
         <button class="icon-btn" onclick="openProfileForm()" title="My Profile" aria-label="My Profile">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c1.5-3.8 5-5.5 7.5-5.5s6 1.7 7.5 5.5"/></svg>
         </button>
@@ -1134,7 +1121,7 @@ function showToast(msg, kind){
    runs), so no per-component wiring is needed as new screens are built.
 ============================================================ */
 function initRipple(){
-  const SEL = '.btn, .navbtn, .railbtn, .icon-btn, .qbtn, .phase-badge';
+  const SEL = '.btn, .navbtn, .railbtn, .icon-btn, .qbtn';
   document.addEventListener('pointerdown', (e) => {
     if(e.button !== undefined && e.button !== 0) return; // left click / primary touch only
     const el = e.target.closest(SEL);
@@ -1236,26 +1223,6 @@ function confirmSheet(message, onYes, opts){
 }
 
 /* ============================================================
-   PHASE BADGE
-============================================================ */
-function cyclePhase(){
-  const order = ["offseason","prep","peak"];
-  const i = order.indexOf(state.settings.phase);
-  const next = order[(i+1) % order.length];
-  if(state.settings.targetsEdited){
-    confirmSheet(`Switch to ${PHASE_PRESETS[next].label} and reset your macro targets to that preset? Your edited targets will be replaced.`, ()=>applyPreset(next), {yes:'Switch', danger:false});
-  } else {
-    applyPreset(next);
-  }
-}
-function renderPhaseBadge(){
-  const b = document.getElementById('phaseBadge');
-  const p = state.settings.phase;
-  b.className = `phase-badge phase-${p}`;
-  b.textContent = PHASE_PRESETS[p].label;
-}
-
-/* ============================================================
    NAV — the hash reflects the current tab so a reload, a bookmark, or a
    link you share lands back on that tab instead of always defaulting to
    Dashboard (previously there was no routing at all: state.tab was
@@ -1283,7 +1250,6 @@ window.addEventListener('hashchange', () => {
 ============================================================ */
 function renderApp(){
   const app = document.getElementById('app');
-  renderPhaseBadge();
   document.querySelectorAll('.navbtn,.railbtn').forEach(b => b.classList.toggle('active', b.dataset.tab === state.tab));
   if(!state.loaded){
     app.innerHTML = serverUnreachable
@@ -1751,8 +1717,8 @@ function renderMacroBar(label, val, target, unit, key){
 
 /* ============================================================
    CHARTS — one shared drawing routine, measured viewBox,
-   axes/gridlines/hover. Called post-render (two-pass), like
-   renderPhaseBadge already does.
+   axes/gridlines/hover. Called post-render (two-pass) — the
+   DOM has to exist before a chart can measure it.
 ============================================================ */
 function niceStep(rough){
   const mag = Math.pow(10, Math.floor(Math.log10(rough||1)));
