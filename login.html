@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VISHALXFIT — Sign in</title>
+<meta name="theme-color" content="#0A0B0D">
+<meta name="robots" content="noindex">
+<link rel="icon" href="icon-192.png">
+<style>
+@font-face { font-family:'Anton'; src:url('fonts/Anton-Regular.ttf') format('truetype'); font-display:swap; }
+@font-face { font-family:'JetBrains Mono'; src:url('fonts/JetBrainsMono-Medium.ttf') format('truetype'); font-weight:500; font-display:swap; }
+:root{
+  --ink:#0A0B0C; --surface:#101215; --surface-raised:#16181A;
+  --acid:#CCFF00; --acid-wash:rgba(204,255,0,0.10); --acid-glow:rgba(204,255,0,0.28);
+  --chalk:#F2F3F0; --ink-2:#9DA2A8; --ink-3:#6E747C;
+  --danger-ink:#FF7A70;
+  --line:rgba(242,243,240,0.08); --line-strong:rgba(242,243,240,0.16);
+  --r-sm:10px; --r-md:14px; --r-lg:20px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; min-height:100vh; background:var(--ink); color:var(--chalk);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI Variable Text',system-ui,sans-serif;
+  display:flex; align-items:center; justify-content:center;
+  padding:max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+}
+.card{ width:100%; max-width:360px; }
+.wordmark{ font-family:'Anton','Arial Narrow',Impact,system-ui; letter-spacing:0.02em; font-size:clamp(28px,7vw,36px); color:var(--acid); text-shadow:0 0 28px var(--acid-glow); margin:0 0 4px; }
+.tag{ font-family:'JetBrains Mono',ui-monospace,monospace; font-size:12px; color:var(--ink-3); margin:0 0 32px; letter-spacing:0.04em; text-transform:uppercase; }
+label{ display:block; font-size:12px; color:var(--ink-2); margin-bottom:8px; font-family:'JetBrains Mono',ui-monospace,monospace; }
+input{
+  width:100%; font-size:16px; padding:14px 16px; border-radius:var(--r-sm);
+  background:var(--surface); border:1px solid var(--line-strong); color:var(--chalk);
+  margin-bottom:16px; outline:none;
+}
+input:focus{ border-color:var(--acid); box-shadow:0 0 0 3px var(--acid-wash); }
+button{
+  width:100%; min-height:48px; border-radius:var(--r-sm); border:none;
+  background:var(--acid); color:#0A0B0C; font-weight:700; font-size:15px;
+  cursor:pointer; box-shadow:0 0 0 1px var(--acid), 0 8px 24px -12px var(--acid-glow);
+}
+button:active{ transform:scale(0.97); }
+button:disabled{ opacity:0.6; }
+.err{ color:var(--danger-ink); font-size:13px; margin:12px 0 0; min-height:16px; font-family:'JetBrains Mono',ui-monospace,monospace; }
+</style>
+</head>
+<body>
+<div class="card">
+  <p class="wordmark">VISHALXFIT</p>
+  <p class="tag">Train. Fuel. Peak.</p>
+  <form id="f" autocomplete="on">
+    <label for="p">Password</label>
+    <input id="p" name="password" type="password" autocomplete="current-password" autofocus required>
+    <button type="submit" id="btn">Sign in</button>
+    <p class="err" id="err"></p>
+  </form>
+</div>
+<script>
+const f = document.getElementById('f');
+const btn = document.getElementById('btn');
+const err = document.getElementById('err');
+f.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  btn.disabled = true; err.textContent = '';
+  try {
+    const password = document.getElementById('p').value;
+    const r = await fetch('/api/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password })
+    });
+    if (!r.ok) { const d = await r.json().catch(()=>({})); throw new Error(d.error || 'Wrong password'); }
+    const next = new URLSearchParams(location.search).get('next') || './';
+    location.replace(next);
+  } catch (e2) {
+    err.textContent = e2.message;
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "type": "module",
+  "workspaces": ["server"],
+  "description": "Root package — exists only so Vercel installs one workspace (server/) plus @vercel/functions, and so /middleware.js and /api/index.js can use ESM without needing .mjs extensions. The actual app lives in server/ (CommonJS, its own package.json) and is untouched by this file's \"type\": \"module\".",
+  "dependencies": {
+    "@vercel/functions": "^2.0.2"
+  }
+}

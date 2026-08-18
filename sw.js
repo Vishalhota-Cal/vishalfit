@@ -1,6 +1,6 @@
 // Bump this on every edit to index.html/css/assets, or an installed app
 // keeps serving the old version forever (cache-first navigation).
-const CACHE = 'vx-2026-08-05-6';
+const CACHE = 'vx-2026-08-18-2';
 const PRECACHE = [
   './',
   './index.html',
@@ -26,14 +26,21 @@ self.addEventListener('activate', (e) => {
   );
 });
 
+// index.html asks for this once at boot (askSwVersion()) instead of keeping
+// its own hardcoded copy of CACHE — one source of truth for the build
+// version shown in Settings, so it can't drift from what's actually running.
+self.addEventListener('message', (e) => {
+  if (e.data === 'GET_VERSION') e.source.postMessage({ type: 'VERSION', version: CACHE });
+});
+
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   const url = new URL(req.url);
   // Never touch non-GET, and never cache cross-origin.
   if (req.method !== 'GET') return;
   if (url.origin !== location.origin) return;
-  // Never cache the API — it now returns LIVE data from the local server
-  // (SQLite behind Express). Cache-first here would silently serve stale
+  // Never cache the API — it returns LIVE data from the server (Supabase
+  // behind Express). Cache-first here would silently serve stale
   // workouts/meals/programs. Network-only, no caches.put, ever.
   if (url.pathname.startsWith('/api/')) return;
 

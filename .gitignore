@@ -1,5 +1,8 @@
+node_modules/
 server/node_modules/
 server/.env
+.env
+.vercel
 data/*.db
 data/*.db-journal
 data/*.db-shm
