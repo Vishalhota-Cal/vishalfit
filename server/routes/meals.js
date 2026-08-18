@@ -3,20 +3,21 @@
 // even though both end up calling the same nutritionService functions.
 const express = require('express');
 const db = require('../db/db');
+const asyncRoute = require('../lib/asyncRoute');
 const { addEntriesToDietLog, removeEntryFromDietLog, dietTotals } = require('../services/nutritionService');
+const { FOOD_LIBRARY_DEFAULT } = require('../services/referenceData');
 
 const router = express.Router();
 
-router.post('/', (req, res) => {
+router.post('/', asyncRoute(async (req, res) => {
   const { date, slot, entry } = req.body;
-  const dietLog = addEntriesToDietLog(db.getKv('dietLog') || [], date, slot, [{ ...entry, loggedBy: 'manual' }]);
-  db.setKv('dietLog', dietLog);
+  const dietLog = addEntriesToDietLog(await db.getKv(req.userId, 'dietLog') || [], date, slot, [{ ...entry, loggedBy: 'manual' }]);
+  await db.setKv(req.userId, 'dietLog', dietLog);
 
   // Grow the custom food library with genuinely new manual entries, same
   // behavior as before — but never for AI-parsed one-offs (kept out of this
   // route entirely, so no flag needed here).
-  const foodLibrary = db.getKv('foodLibrary') || [];
-  const { FOOD_LIBRARY_DEFAULT } = require('../services/referenceData');
+  const foodLibrary = await db.getKv(req.userId, 'foodLibrary') || [];
   const known = [...FOOD_LIBRARY_DEFAULT, ...foodLibrary].some(f => f.name.toLowerCase() === entry.name.toLowerCase());
   if (!known) {
     const qty = entry.qty || 1;
@@ -26,18 +27,18 @@ router.post('/', (req, res) => {
       carbs: (Number(entry.carbs) || 0) / qty, fat: (Number(entry.fat) || 0) / qty,
       fiber: entry.fiber == null ? null : (Number(entry.fiber) || 0) / qty
     });
-    db.setKv('foodLibrary', foodLibrary);
+    await db.setKv(req.userId, 'foodLibrary', foodLibrary);
   }
 
   const day = dietLog.find(d => d.date === date);
   res.json({ totals: dietTotals(day) });
-});
+}));
 
-router.delete('/', (req, res) => {
+router.delete('/', asyncRoute(async (req, res) => {
   const { date, slot, idx } = req.body;
-  const dietLog = removeEntryFromDietLog(db.getKv('dietLog') || [], date, slot, idx);
-  db.setKv('dietLog', dietLog);
+  const dietLog = removeEntryFromDietLog(await db.getKv(req.userId, 'dietLog') || [], date, slot, idx);
+  await db.setKv(req.userId, 'dietLog', dietLog);
   res.json({ ok: true });
-});
+}));
 
 module.exports = router;

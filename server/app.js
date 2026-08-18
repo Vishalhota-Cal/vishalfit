@@ -9,11 +9,12 @@ const attachUser = require('./middleware/user');
 const app = express();
 const ROOT = path.join(__dirname, '..'); // project root — index.html, sw.js, manifest, fonts, icons live here
 
-// Backup restore used to carry base64-embedded photo blobs and needed 60mb;
-// photos now live in Supabase Storage and the export/restore payload is
-// metadata only (see routes/backup.js), so this comes back down to something
-// that also fits Vercel's hard 4.5mb function body limit.
-app.use(express.json({ limit: '2mb' }));
+// Backup export/restore still carries base64-embedded photo blobs (see
+// routes/backup.js) — bumped back up from a smaller limit so a restore with
+// several progress photos doesn't 413. Stays under Vercel's hard 4.5mb
+// function body limit; if your export grows past that, split the restore
+// or trim old photos first.
+app.use(express.json({ limit: '4mb' }));
 
 // Unauthenticated on purpose — this IS the login endpoint. Everything below
 // it requires the signed cookie /middleware.js checks at the edge.

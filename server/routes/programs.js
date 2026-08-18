@@ -1,39 +1,44 @@
 const express = require('express');
 const db = require('../db/db');
+const asyncRoute = require('../lib/asyncRoute');
 const svc = require('../services/workoutProgramService');
 
 const router = express.Router();
 
-router.get('/', (req, res) => res.json({ programs: db.getKv('programs') || [] }));
+router.get('/', asyncRoute(async (req, res) => res.json({ programs: await db.getKv(req.userId, 'programs') || [] })));
 
-router.post('/', (req, res) => {
-  const programs = svc.createProgram(db.getKv('programs') || [], req.body);
-  db.setKv('programs', programs);
+router.post('/', asyncRoute(async (req, res) => {
+  const programs = svc.createProgram(await db.getKv(req.userId, 'programs') || [], req.body);
+  await db.setKv(req.userId, 'programs', programs);
   res.json({ programs });
-});
+}));
 
-router.put('/:id', (req, res) => {
-  const programs = svc.updateProgram(db.getKv('programs') || [], req.params.id, req.body);
-  db.setKv('programs', programs);
+router.put('/:id', asyncRoute(async (req, res) => {
+  const programs = svc.updateProgram(await db.getKv(req.userId, 'programs') || [], req.params.id, req.body);
+  await db.setKv(req.userId, 'programs', programs);
   res.json({ programs });
-});
+}));
 
-router.delete('/:id', (req, res) => {
-  const programs = svc.deleteProgram(db.getKv('programs') || [], req.params.id);
-  db.setKv('programs', programs);
+router.delete('/:id', asyncRoute(async (req, res) => {
+  const programs = svc.deleteProgram(await db.getKv(req.userId, 'programs') || [], req.params.id);
+  await db.setKv(req.userId, 'programs', programs);
   res.json({ programs });
-});
+}));
 
-router.post('/:id/activate', (req, res) => {
-  const programs = svc.setActiveProgram(db.getKv('programs') || [], req.params.id);
-  db.setKv('programs', programs);
+router.post('/:id/activate', asyncRoute(async (req, res) => {
+  const programs = svc.setActiveProgram(await db.getKv(req.userId, 'programs') || [], req.params.id);
+  await db.setKv(req.userId, 'programs', programs);
   res.json({ programs });
-});
+}));
 
-router.get('/checklist', (req, res) => {
+router.get('/checklist', asyncRoute(async (req, res) => {
   const todayStr = req.query.date || new Date().toISOString().slice(0, 10);
-  const checklist = svc.computeWeeklyChecklist(db.getKv('programs') || [], db.getKv('workouts') || [], todayStr);
+  const [programs, workouts] = await Promise.all([
+    db.getKv(req.userId, 'programs'),
+    db.getKv(req.userId, 'workouts')
+  ]);
+  const checklist = svc.computeWeeklyChecklist(programs || [], workouts || [], todayStr);
   res.json(checklist);
-});
+}));
 
 module.exports = router;

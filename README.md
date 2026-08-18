@@ -161,11 +161,14 @@ whether or not it was started through "Start Workout."
 
 ## Backup & restore
 
-Settings → **Export Backup** produces one `.json` file with everything —
-photos are exported as Supabase Storage pointers now, not embedded bytes, so
-the file stays small no matter how many progress photos you have. **Restore
-from Backup** replaces everything currently in the app with that file's
-contents — a full restore, not a merge — and asks you to confirm first.
+Settings → **Export Backup** produces one `.json` file with everything,
+including photos embedded as base64 (same as the old SQLite-era format) —
+self-contained, but the file grows with your photo count. **Restore from
+Backup** replaces everything currently in the app with that file's contents
+— a full restore, not a merge — and asks you to confirm first. Restore
+re-uploads each photo to Storage under your `OWNER_USER_ID`; it never
+deletes existing Storage files, only the Postgres rows pointing at them, so
+a restore can't orphan-delete files a later restore might still want.
 
 ## Testing
 

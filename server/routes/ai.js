@@ -14,15 +14,15 @@ router.post('/estimate', asyncRoute(async (req, res) => {
   const { description, date, slot } = req.body;
   if (!description || !description.trim()) return res.status(400).json({ error: 'description is required' });
 
-  const settings = db.getKv('settings') || {};
+  const settings = await db.getKv(req.userId, 'settings') || {};
   const apiKey = process.env.OPENAI_API_KEY;
   const model = settings.aiModel || process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
   try {
     const items = await aiService.estimateMeal(description, { apiKey, model });
     const entries = itemsToEntries(items);
-    const dietLog = addEntriesToDietLog(db.getKv('dietLog') || [], date, slot, entries);
-    db.setKv('dietLog', dietLog);
+    const dietLog = addEntriesToDietLog(await db.getKv(req.userId, 'dietLog') || [], date, slot, entries);
+    await db.setKv(req.userId, 'dietLog', dietLog);
     const day = dietLog.find(d => d.date === date);
     res.json({ entries, totals: dietTotals(day) });
   } catch (e) {

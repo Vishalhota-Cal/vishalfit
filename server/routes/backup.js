@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../db/db');
+const asyncRoute = require('../lib/asyncRoute');
 const migrate = require('../db/migrate');
 
 const router = express.Router();
@@ -8,12 +9,14 @@ const APP_ID = 'vishalxfit';
 // documented/written going forward is APP_ID.
 const LEGACY_APP_IDS = ['vishalprime', 'vishal7'];
 
-router.get('/export', (req, res) => {
-  const kv = db.getAllKv();
-  const photos = db.listPhotoMeta().map(meta => {
-    const rec = db.getPhotoRecord(meta.id);
-    return { ...meta, type: rec.type, image: `data:${rec.type};base64,${rec.display.toString('base64')}` };
-  });
+router.get('/export', asyncRoute(async (req, res) => {
+  const kv = await db.getAllKv(req.userId);
+  const metas = await db.listPhotoMeta(req.userId);
+  const photos = [];
+  for (const meta of metas) {
+    const rec = await db.getPhotoRecord(req.userId, meta.id);
+    photos.push({ ...meta, type: rec.type, image: `data:${rec.type};base64,${rec.display.toString('base64')}` });
+  }
   res.json({
     app: APP_ID, schemaVersion: 1, exportedAt: new Date().toISOString(),
     settings: kv.settings, workouts: kv.workouts, exerciseLibrary: kv.exerciseLibrary,
@@ -21,9 +24,9 @@ router.get('/export', (req, res) => {
     programs: kv.programs, steps: kv.steps, cardioLog: kv.cardioLog,
     profile: kv.profile, dietPlan: kv.dietPlan, waterLog: kv.waterLog, photos
   });
-});
+}));
 
-router.post('/restore', async (req, res) => {
+router.post('/restore', asyncRoute(async (req, res) => {
   const data = req.body;
   if (data.app !== APP_ID && !LEGACY_APP_IDS.includes(data.app)) {
     return res.status(400).json({ error: 'Not a VISHALXFIT (or a recognized older) backup file' });
@@ -35,7 +38,7 @@ router.post('/restore', async (req, res) => {
     if (!match) continue;
     photos.push({ id: p.id, date: p.date, pose: p.pose, note: p.note || '', w: p.w, h: p.h, type: match[1], display: Buffer.from(match[2], 'base64'), thumb: null });
   }
-  db.replaceAll({
+  await db.replaceAll(req.userId, {
     kv: {
       settings: migrate.migrateSettings(data.settings),
       workouts: migrate.migrateWorkouts(data.workouts || []),
@@ -57,11 +60,11 @@ router.post('/restore', async (req, res) => {
     ok: true,
     counts: { workouts: (data.workouts || []).length, measurements: (data.measurements || []).length, photos: photos.length }
   });
-});
+}));
 
-router.post('/reset', (req, res) => {
-  db.resetAll();
+router.post('/reset', asyncRoute(async (req, res) => {
+  await db.resetAll(req.userId);
   res.json({ ok: true });
-});
+}));
 
 module.exports = router;

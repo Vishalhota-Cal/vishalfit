@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../db/db');
+const asyncRoute = require('../lib/asyncRoute');
 const { computeTargetsFromStats } = require('../services/profileService');
 
 const router = express.Router();
@@ -8,23 +9,23 @@ const router = express.Router();
 // targets, and returns them — the Fuel tab's "Calculate from my stats"
 // button applies whatever this returns. Doesn't persist anything itself;
 // applying the result goes through the existing settings/targets path.
-router.post('/targets', (req, res) => {
-  const profile = db.getKv('profile');
+router.post('/targets', asyncRoute(async (req, res) => {
+  const profile = await db.getKv(req.userId, 'profile');
   if (!profile || !profile.heightCm || !profile.age || !profile.sex) {
     return res.status(412).json({ error: 'Fill in your profile (height, age, sex) first' });
   }
-  const measurements = db.getKv('measurements') || [];
+  const measurements = await db.getKv(req.userId, 'measurements') || [];
   const latestWeight = [...measurements].filter(m => m.weight).sort((a, b) => a.date < b.date ? 1 : -1)[0];
   if (!latestWeight) {
     return res.status(412).json({ error: 'Log a bodyweight entry first' });
   }
-  const settings = db.getKv('settings') || {};
+  const settings = await db.getKv(req.userId, 'settings') || {};
   const targets = computeTargetsFromStats({
     heightCm: profile.heightCm, age: profile.age, sex: profile.sex,
     activityLevel: profile.activityLevel, weightKg: Number(latestWeight.weight),
     phase: settings.phase || 'offseason'
   });
   res.json({ targets });
-});
+}));
 
 module.exports = router;

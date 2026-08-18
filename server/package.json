@@ -2,7 +2,7 @@
   "name": "vishal-prime-server",
   "version": "1.0.0",
   "private": true,
-  "description": "Local backend for VISHALXFIT — Express + SQLite, single user, laptop-only.",
+  "description": "Node/Express backend for VISHALXFIT — data lives in Supabase (Postgres + Storage), same code locally and on Vercel.",
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
@@ -14,6 +14,7 @@
     "node": ">=22.5.0"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "multer": "^2.2.0"
