@@ -69,5 +69,5 @@ export const config = {
   // and the PWA install artifacts — those three (manifest, sw.js, icons)
   // must stay reachable unauthenticated or iOS silently refuses to let you
   // "Add to Home Screen".
-  matcher: ['/((?!login\\.html|api/auth/(login|logout)|manifest\\.webmanifest|sw\\.js|icon-.*\\.png|apple-touch-icon\\.png|fonts/).*)']
+  matcher: ['/((?!login\\.html|api/auth/(?:login|logout)|manifest\\.webmanifest|sw\\.js|icon-.*\\.png|apple-touch-icon\\.png|fonts/).*)']
 };
